@@ -1,0 +1,512 @@
+\documentclass[12pt,oneside,a4paper,chapter=TITLE]{abntex2}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{indentfirst}
+\usepackage{graphicx}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usepackage{float}
+\usepackage{url}
+\usepackage{hyperref}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.2cm}
+
+\titulo{UniSync}
+
+\autor{
+Roberto Matheus Nunes dos Santos \\
+Kamilly Stephany Saraiva Santos \\
+João Victor Soares de Lima \\
+Samuel Alexandre Correia da Silva \\
+Reinoldes Clarindo de Oliveira Junior
+}
+
+\instituicao{Centro Universitário Maurício de Nassau - UNINASSAU}
+\local{Maceió - AL}
+\data{2026}
+\tipotrabalho{Relatório Técnico}
+
+\begin{document}
+
+\begin{figure}[!htb]
+    \centering
+    \includegraphics[width=0.35\textwidth]{logo_unina.png}
+\end{figure}
+
+\imprimircapa
+
+\chapter{Introdução}
+
+O \textbf{UniSync} é a proposta de uma plataforma voltada à centralização
+de oportunidades acadêmicas, como palestras, eventos, estágios e
+projetos. A ideia surge a partir da necessidade de facilitar o acesso
+dos estudantes a informações que podem estar distribuídas em diferentes
+canais e ambientes.
+
+A proposta consiste na organização dessas informações em uma solução
+integrada, permitindo que o estudante encontre oportunidades de
+interesse de forma mais organizada e tenha acesso a informações
+relacionadas a prazos e notificações.
+
+Para atender a essa proposta, o UniSync deverá ser estruturado com uma
+arquitetura baseada em microsserviços e Micro-Frontends, possibilitando
+a separação dos diferentes componentes da solução.
+
+O projeto está organizado em componentes para ambiente Web, serviços de
+backend, aplicativo mobile e sistemas de persistência de dados. Cada
+parte deverá possuir responsabilidades específicas, permitindo uma
+organização modular da solução.
+
+\chapter{Contextualização do Problema}
+
+Informações relacionadas a oportunidades acadêmicas podem estar
+disponíveis em diferentes meios de comunicação, dificultando sua
+localização e acompanhamento pelos estudantes.
+
+Palestras, eventos, estágios e projetos podem possuir diferentes
+períodos de inscrição, datas e informações específicas. Quando esses
+dados estão distribuídos em diferentes canais, o estudante pode ter
+dificuldade para acompanhar as oportunidades disponíveis e seus
+respectivos prazos.
+
+Nesse contexto, o UniSync é proposto como uma plataforma capaz de
+centralizar essas informações em um único ambiente, facilitando a
+consulta e o acompanhamento das oportunidades acadêmicas.
+
+\chapter{Justificativa}
+
+A proposta do UniSync justifica-se pela possibilidade de oferecer aos
+estudantes um ambiente centralizado para consulta de oportunidades
+acadêmicas.
+
+A utilização de uma arquitetura baseada em microsserviços e
+Micro-Frontends também permite propor uma solução modular, na qual
+diferentes partes da plataforma possuem responsabilidades bem
+definidas.
+
+Além disso, a existência de uma aplicação mobile poderá facilitar o
+acesso às informações e ao acompanhamento de prazos por meio de
+dispositivos Android.
+
+Dessa forma, o projeto busca propor uma solução tecnológica organizada
+para facilitar o acesso às oportunidades acadêmicas e melhorar a
+disponibilidade dessas informações para os estudantes.
+
+\chapter{Objetivos}
+
+\section{Objetivo Geral}
+
+Propor uma plataforma denominada \textbf{UniSync} para centralização de
+oportunidades acadêmicas, utilizando uma arquitetura baseada em
+microsserviços e Micro-Frontends.
+
+\section{Objetivos Específicos}
+
+\begin{itemize}
+    \item Centralizar informações sobre palestras, eventos, estágios e
+    projetos;
+
+    \item Disponibilizar um feed para apresentação das oportunidades;
+
+    \item Permitir a busca e filtragem das oportunidades;
+
+    \item Possibilitar o acompanhamento de prazos relacionados às
+    oportunidades;
+
+    \item Prever a utilização de alertas em tempo real no aplicativo
+    mobile;
+
+    \item Organizar a solução por meio de microsserviços e
+    Micro-Frontends;
+
+    \item Propor uma aplicação mobile nativa para dispositivos Android.
+\end{itemize}
+
+\chapter{Visão Geral da Solução}
+
+O UniSync deverá ser composto por diferentes componentes responsáveis
+por partes específicas da solução. A arquitetura proposta contempla
+uma aplicação Web, serviços de backend, um aplicativo mobile e
+diferentes mecanismos de persistência de dados.
+
+\section{Frontend Web}
+
+O ambiente Web deverá utilizar uma arquitetura baseada em
+Micro-Frontends. A proposta contempla um Shell responsável pela
+estrutura principal da aplicação e um Micro-Frontend específico para
+o feed de oportunidades.
+
+O Shell será desenvolvido utilizando Python e Django, sendo responsável
+pela estrutura do ambiente, roteamento principal e identidade visual
+da aplicação.
+
+O Micro-Frontend do feed deverá utilizar Vue.js, proporcionando uma
+interface reativa para apresentação das oportunidades acadêmicas.
+
+\section{Backend}
+
+O backend deverá ser dividido em diferentes serviços, seguindo a
+proposta de arquitetura de microsserviços.
+
+O \textbf{Núcleo Acadêmico}, desenvolvido em \textbf{C\#} com .NET,
+deverá ser responsável pelo gerenciamento de usuários, permissões,
+autenticação e regras estruturadas relacionadas ao sistema.
+
+O \textbf{Motor de Oportunidades}, desenvolvido em Python com FastAPI,
+deverá fornecer uma API voltada às operações relacionadas às
+oportunidades, incluindo mecanismos para consultas, buscas e
+filtragens.
+
+\section{Aplicativo Mobile UniSync}
+
+O projeto também deverá contemplar um aplicativo mobile denominado
+\textbf{UniSync}, desenvolvido em Kotlin utilizando Jetpack Compose.
+
+A aplicação deverá ser direcionada a dispositivos Android e deverá
+permitir o acompanhamento das oportunidades acadêmicas, incluindo
+informações relacionadas a prazos e a possibilidade de utilização de
+alertas em tempo real.
+
+\chapter{Arquitetura Proposta}
+
+\section{Organização dos Componentes}
+
+A arquitetura do UniSync deverá seguir uma abordagem modular, separando
+as responsabilidades entre os componentes Web, mobile e backend.
+
+A utilização de microsserviços deverá permitir a separação das
+responsabilidades do backend, enquanto os Micro-Frontends deverão
+possibilitar a organização independente de partes da interface Web.
+
+\section{Shell e Micro-Frontend}
+
+O Shell deverá funcionar como a estrutura principal do ambiente Web,
+sendo responsável pelo roteamento e pela organização da aplicação.
+
+O Micro-Frontend desenvolvido em Vue.js deverá concentrar a
+funcionalidade relacionada ao feed de oportunidades.
+
+Essa separação deverá permitir que diferentes partes da interface
+possuam responsabilidades específicas dentro da arquitetura proposta.
+
+\section{Microsserviços}
+
+O backend deverá ser organizado em serviços independentes.
+
+O Núcleo Acadêmico deverá concentrar funcionalidades relacionadas aos
+usuários, autenticação, permissões e regras estruturadas.
+
+O Motor de Oportunidades deverá concentrar funcionalidades relacionadas
+à consulta, busca e filtragem das oportunidades acadêmicas.
+
+\section{Comunicação entre os Componentes}
+
+A comunicação entre os componentes deverá ocorrer por meio de APIs,
+permitindo que as diferentes partes da solução possam trocar
+informações de maneira organizada.
+
+No ambiente Web, o Shell deverá organizar a aplicação e realizar a
+integração com o Micro-Frontend responsável pelo feed. O
+Micro-Frontend deverá apresentar as oportunidades ao usuário e utilizar
+os serviços disponibilizados pelo backend.
+
+O aplicativo mobile UniSync também deverá se comunicar com os serviços
+de backend, permitindo o acesso às informações relacionadas às
+oportunidades, prazos e alertas previstos.
+
+No backend, o Núcleo Acadêmico e o Motor de Oportunidades deverão
+possuir responsabilidades distintas. O Núcleo Acadêmico deverá
+concentrar informações relacionadas a usuários, autenticação,
+permissões e regras estruturadas, enquanto o Motor de Oportunidades
+deverá concentrar operações relacionadas à consulta, busca e filtragem
+das oportunidades.
+
+Os serviços de backend deverão acessar as estruturas de persistência
+conforme o tipo de informação armazenada. Os dados estruturados,
+incluindo usuários e turmas, deverão utilizar um banco relacional,
+enquanto informações relacionadas a eventos, vagas e oportunidades
+poderão utilizar o MongoDB.
+
+De forma conceitual, a comunicação entre os componentes poderá ser
+representada pelos seguintes fluxos:
+
+\begin{center}
+\textbf{Shell Web}
+$\leftrightarrow$
+\textbf{Micro-Frontend Feed}
+$\leftrightarrow$
+\textbf{APIs do Backend}
+\end{center}
+
+\begin{center}
+\textbf{UniSync Mobile}
+$\leftrightarrow$
+\textbf{APIs do Backend}
+\end{center}
+
+\begin{center}
+\textbf{Núcleo Acadêmico}
+$\leftrightarrow$
+\textbf{Motor de Oportunidades}
+$\leftrightarrow$
+\textbf{Camada de Persistência}
+\end{center}
+
+Esses fluxos representam a comunicação conceitual entre os
+componentes e não correspondem a uma implementação concluída, uma vez
+que o presente trabalho apresenta a ideação da solução.
+
+\chapter{Tecnologias Propostas}
+
+A arquitetura do UniSync é composta por diferentes camadas que utilizam
+tecnologias específicas de acordo com suas responsabilidades. A tabela
+a seguir apresenta a organização tecnológica proposta para cada
+componente.
+
+\begin{table}[H]
+\centering
+\caption{Tecnologias propostas para o UniSync}
+\begin{tabular}{lll}
+\toprule
+\textbf{Camada} & \textbf{Componente} & \textbf{Tecnologia} \\
+\midrule
+Frontend Web & Shell & Python + Django \\
+Frontend Web & Micro-Frontend Feed & Vue.js \\
+Backend & Núcleo Acadêmico & C\# + .NET \\
+Backend & Motor de Oportunidades & Python + FastAPI \\
+Mobile & UniSync & Kotlin + Jetpack Compose \\
+Persistência & Banco relacional & SQL Server ou PostgreSQL \\
+Persistência & Banco não relacional & MongoDB \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Python e Django}
+
+Python será utilizado no desenvolvimento do Shell Web por meio do
+framework Django. Essa camada deverá ser responsável pela estrutura
+principal do ambiente Web.
+
+\section{Vue.js}
+
+Vue.js deverá ser utilizado no desenvolvimento do Micro-Frontend
+responsável pelo feed de oportunidades.
+
+\section{C\# e .NET}
+
+O Núcleo Acadêmico deverá utilizar \textbf{C\#} e .NET para implementar
+as funcionalidades relacionadas aos usuários, autenticação, permissões
+e regras estruturadas.
+
+\section{Python e FastAPI}
+
+Python com FastAPI deverá ser utilizado no Motor de Oportunidades,
+fornecendo uma API voltada às operações de consulta, busca e filtragem.
+
+\section{Kotlin e Jetpack Compose}
+
+O aplicativo mobile UniSync deverá ser desenvolvido utilizando Kotlin
+e Jetpack Compose, com foco em dispositivos Android.
+
+\section{Bancos de Dados}
+
+A proposta contempla a utilização de um banco de dados relacional,
+como SQL Server ou PostgreSQL, para armazenamento de informações
+estruturadas, incluindo usuários e turmas.
+
+O MongoDB deverá ser utilizado para informações relacionadas a eventos,
+vagas e outras oportunidades que possam apresentar estruturas mais
+flexíveis.
+
+A definição final do modelo de dados e dos relacionamentos deverá
+ocorrer durante as etapas posteriores de desenvolvimento.
+
+\chapter{Funcionalidades Idealizadas}
+
+\section{Centralização de Oportunidades}
+
+O UniSync deverá centralizar informações relacionadas a palestras,
+eventos, estágios e projetos em um único ambiente.
+
+A proposta é permitir que o estudante tenha acesso a diferentes tipos
+de oportunidades sem a necessidade de consultar diversos ambientes
+separadamente.
+
+\section{Feed de Oportunidades}
+
+A aplicação Web deverá possuir um feed destinado à apresentação das
+oportunidades disponíveis.
+
+O feed deverá utilizar Vue.js por meio de um Micro-Frontend, permitindo
+uma interface voltada à apresentação dinâmica das informações.
+
+\section{Busca e Filtragem}
+
+O sistema deverá contemplar mecanismos de busca e filtragem das
+oportunidades.
+
+A finalidade prevista é permitir que o estudante encontre informações
+de acordo com os critérios disponíveis para cada oportunidade.
+
+\section{Acompanhamento de Prazos e Alertas}
+
+O aplicativo \textbf{UniSync} deverá contemplar o acompanhamento de
+prazos relacionados às oportunidades. A finalidade prevista é permitir
+que o estudante tenha acesso a informações temporais importantes
+diretamente pelo aplicativo.
+
+Além do acompanhamento de prazos, também está prevista a possibilidade
+de utilização de alertas em tempo real no UniSync. Esses alertas poderão
+auxiliar na apresentação de informações relacionadas às oportunidades e
+aos seus respectivos prazos.
+
+A implementação detalhada desse mecanismo deverá ser definida em uma
+etapa posterior do desenvolvimento, uma vez que o presente trabalho
+representa apenas a ideação do projeto.
+
+\chapter{Dados e Persistência}
+
+A persistência dos dados deverá ser organizada de acordo com as
+características das informações utilizadas pela plataforma.
+
+Para dados estruturados, como usuários e turmas, está prevista a
+utilização de um banco de dados relacional, podendo ser adotado SQL
+Server ou PostgreSQL.
+
+Para informações relacionadas às oportunidades, eventos e vagas, está
+prevista a utilização do MongoDB, permitindo maior flexibilidade na
+estrutura desses dados.
+
+A definição final do modelo de dados e dos relacionamentos deverá
+ocorrer durante as etapas posteriores de desenvolvimento.
+
+\chapter{Estrutura Inicial do Projeto}
+
+A organização inicial do repositório deverá seguir uma estrutura
+separada por componentes, facilitando a organização do desenvolvimento.
+
+Entre os principais diretórios previstos estão:
+
+\begin{itemize}
+    \item \texttt{.github/workflows/}: arquivos relacionados aos
+    fluxos de trabalho automatizados do repositório;
+
+    \item \texttt{backend-python/}: componente relacionado aos serviços
+    desenvolvidos em Python;
+
+    \item \texttt{frontend-shell/}: componente responsável pelo Shell
+    da aplicação Web;
+
+    \item \texttt{frontend-web-aluno/}: componente relacionado à
+    interface Web destinada ao aluno;
+
+    \item \texttt{mobile-kotlin/}: componente destinado ao aplicativo
+    mobile UniSync;
+
+    \item \texttt{docs/}: documentação do projeto;
+
+    \item \texttt{README.md}: documentação inicial e informações
+    gerais do repositório.
+\end{itemize}
+
+Essa organização deverá facilitar a separação dos diferentes
+componentes previstos na arquitetura do projeto.
+
+\chapter{Organização da Equipe}
+
+A divisão inicial das responsabilidades da equipe está apresentada a
+seguir:
+
+\begin{itemize}
+    \item \textbf{Matheus}: Backend e Banco de Dados;
+
+    \item \textbf{Kamilly}: Frontend;
+
+    \item \textbf{João}: Backend e Banco de Dados;
+
+    \item \textbf{Samuel Alexandre Correia da Silva}: Backend e
+    Documentação em LaTeX;
+
+    \item \textbf{Reinoldes}: Frontend.
+\end{itemize}
+
+A distribuição das atividades poderá ser ajustada de acordo com as
+necessidades identificadas nas etapas posteriores do projeto.
+
+\chapter{Etapas Futuras do Projeto}
+
+Como o presente trabalho representa a ideação do UniSync, as etapas
+seguintes deverão contemplar o detalhamento e desenvolvimento da
+solução proposta.
+
+Entre as atividades futuras poderão estar:
+
+\begin{itemize}
+    \item detalhamento dos requisitos funcionais e não funcionais;
+
+    \item definição dos contratos das APIs;
+
+    \item modelagem dos bancos de dados;
+
+    \item desenvolvimento dos microsserviços;
+
+    \item desenvolvimento dos componentes Web;
+
+    \item desenvolvimento do aplicativo mobile;
+
+    \item integração entre os diferentes componentes;
+
+    \item realização de testes;
+
+    \item avaliação da solução proposta.
+\end{itemize}
+
+Essas etapas deverão ser realizadas de forma progressiva, permitindo
+que a arquitetura e as funcionalidades inicialmente propostas sejam
+detalhadas e desenvolvidas.
+
+\chapter{Considerações Finais}
+
+O UniSync apresenta uma proposta de plataforma para centralização de
+oportunidades acadêmicas, reunindo informações relacionadas a
+palestras, eventos, estágios e projetos em um ambiente organizado.
+
+A arquitetura baseada em microsserviços e Micro-Frontends foi proposta
+com o objetivo de separar responsabilidades entre os diferentes
+componentes da solução, contemplando ambientes Web, backend e mobile.
+
+O aplicativo mobile UniSync deverá complementar a plataforma,
+possibilitando o acompanhamento de oportunidades e de seus respectivos
+prazos, além da possibilidade de utilização de alertas em tempo real.
+
+Por se tratar de uma proposta de projeto, os detalhes de implementação,
+integração e validação deverão ser definidos nas etapas futuras de
+desenvolvimento.
+
+\chapter{Referências}
+
+\begin{itemize}
+    \item DJANGO SOFTWARE FOUNDATION. \textit{Django documentation}.
+    Disponível em: \url{https://docs.djangoproject.com/}. Acesso em:
+    2026.
+
+    \item VUE.JS. \textit{Vue.js documentation}. Disponível em:
+    \url{https://vuejs.org/}. Acesso em: 2026.
+
+    \item MICROSOFT. \textit{.NET documentation}. Disponível em:
+    \url{https://learn.microsoft.com/dotnet/}. Acesso em: 2026.
+
+    \item FASTAPI. \textit{FastAPI documentation}. Disponível em:
+    \url{https://fastapi.tiangolo.com/}. Acesso em: 2026.
+
+    \item ANDROID DEVELOPERS. \textit{Jetpack Compose}. Disponível em:
+    \url{https://developer.android.com/compose}. Acesso em: 2026.
+
+    \item MONGODB. \textit{MongoDB documentation}. Disponível em:
+    \url{https://www.mongodb.com/docs/}. Acesso em: 2026.
+\end{itemize}
+
+\end{document}
