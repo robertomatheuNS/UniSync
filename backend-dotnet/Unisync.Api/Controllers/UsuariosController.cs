@@ -1,0 +1,41 @@
+using Microsoft.AspNetCore.Mvc;
+using Unisync.Api.DTOs;
+using Unisync.Api.Services;
+
+namespace Unisync.Api.Controllers;
+
+[ApiController]
+[Route("api/usuarios")]
+public class UsuariosController(IUsuarioService usuarioService) : ControllerBase
+{
+    [HttpPost]
+    public async Task<ActionResult<UsuarioResponse>> Criar(
+        CriarUsuarioRequest request,
+        CancellationToken cancellationToken)
+    {
+        var resultado = await usuarioService.CriarAsync(request, cancellationToken);
+        if (resultado.Status == CriarUsuarioStatus.EmailJaCadastrado)
+        {
+            return Conflict(new { mensagem = "O e-mail informado já está cadastrado." });
+        }
+
+        return CreatedAtAction(
+            nameof(ObterPorId),
+            new { id = resultado.Usuario!.Id },
+            resultado.Usuario);
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IReadOnlyList<UsuarioResponse>>> Listar(
+        CancellationToken cancellationToken) =>
+        Ok(await usuarioService.ListarAsync(cancellationToken));
+
+    [HttpGet("{id:guid}")]
+    public async Task<ActionResult<UsuarioResponse>> ObterPorId(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var usuario = await usuarioService.ObterPorIdAsync(id, cancellationToken);
+        return usuario is null ? NotFound() : Ok(usuario);
+    }
+}
