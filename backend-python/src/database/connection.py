@@ -1,6 +1,7 @@
 from pymongo import AsyncMongoClient
-
+from beanie import init_beanie
 from src.core.config import settings
+from src.models.oportunidade import Oportunidade
 
 
 client = AsyncMongoClient(settings.mongodb_url)
@@ -8,6 +9,12 @@ client = AsyncMongoClient(settings.mongodb_url)
 
 async def conectar_mongodb():
     await client.admin.command("ping")
+
+    await init_beanie ( 
+        database=client[settings.mongodb_database],
+        document_models=[Oportunidade]
+    )
+    
     print("Conexão com MongoDB estabelecida!")
 
 
