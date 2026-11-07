@@ -1,0 +1,20 @@
+{
+    "name": "UniSync Python Backend",
+    "dockerComposeFile": "../docker-compose.yml",
+    "service": "api",
+    "workspaceFolder": "/app",
+    "shutdownAction": "stopCompose",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-python.vscode-pylance",
+                "usernamehw.errorlens",
+                "oderwat.indent-rainbow",
+                "eamodio.gitlens",
+                "esbenp.prettier-vscode",
+                "dracula-theme.theme-dracula"
+            ]
+        }
+    }
+}
