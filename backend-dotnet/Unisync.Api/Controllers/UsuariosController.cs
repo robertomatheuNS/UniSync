@@ -1,3 +1,5 @@
+
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Unisync.Api.DTOs;
 using Unisync.Api.Services;
@@ -25,11 +27,28 @@ public class UsuariosController(IUsuarioService usuarioService) : ControllerBase
             resultado.Usuario);
     }
 
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(
+        LoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        var token = await usuarioService.LoginAsync(request, cancellationToken);
+
+        if (token is null)
+        {
+            return Unauthorized(new { mensagem = "E-mail ou senha inválidos." });
+        }
+
+        return Ok(new { token });
+    }
+
+    [Authorize]
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<UsuarioResponse>>> Listar(
         CancellationToken cancellationToken) =>
         Ok(await usuarioService.ListarAsync(cancellationToken));
 
+    [Authorize]
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<UsuarioResponse>> ObterPorId(
         Guid id,

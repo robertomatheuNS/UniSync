@@ -31,6 +31,11 @@ public class UsuarioRepository(AppDbContext context) : IUsuarioRepository
     public Task<Usuario?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken) =>
         context.Usuarios.AsNoTracking().SingleOrDefaultAsync(usuario => usuario.Id == id, cancellationToken);
 
+    public Task<Usuario?> ObterPorEmailAsync(string email, CancellationToken cancellationToken) =>
+        context.Usuarios
+        .AsNoTracking()
+        .SingleOrDefaultAsync(usuario => usuario.Email == email, cancellationToken);
+
     public async Task<IReadOnlyList<Usuario>> ListarAsync(CancellationToken cancellationToken) =>
         await context.Usuarios.AsNoTracking().OrderBy(usuario => usuario.Nome).ToListAsync(cancellationToken);
 }

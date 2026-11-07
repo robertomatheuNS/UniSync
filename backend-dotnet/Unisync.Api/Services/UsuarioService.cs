@@ -1,4 +1,9 @@
+
 using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using Unisync.Api.DTOs;
 using Unisync.Api.Entities;
 using Unisync.Api.Repositories;
@@ -7,7 +12,8 @@ namespace Unisync.Api.Services;
 
 public class UsuarioService(
     IUsuarioRepository usuarioRepository,
-    IPasswordHasher<Usuario> passwordHasher) : IUsuarioService
+    IPasswordHasher<Usuario> passwordHasher,
+    IConfiguration configuration) : IUsuarioService
 {
     public async Task<CriarUsuarioResultado> CriarAsync(
         CriarUsuarioRequest request,
@@ -46,6 +52,59 @@ public class UsuarioService(
     {
         var usuario = await usuarioRepository.ObterPorIdAsync(id, cancellationToken);
         return usuario is null ? null : ParaResponse(usuario);
+    }
+
+    public async Task<string?> LoginAsync(
+        LoginRequest request,
+        CancellationToken cancellationToken)
+    {
+        var email = request.Email.Trim().ToLowerInvariant();
+
+        var usuario = await usuarioRepository.ObterPorEmailAsync(
+            email, cancellationToken);
+
+        if (usuario is null)
+        {
+            return null;
+        }
+
+        var resultadoSenha = passwordHasher.VerifyHashedPassword(
+            usuario, usuario.SenhaHash, request.Senha);
+
+        if (resultadoSenha == PasswordVerificationResult.Failed)
+        {
+            return null;
+        }
+
+        var chave = Convert.FromBase64String(
+            configuration["Jwt:Key"]
+            ?? throw new InvalidOperationException("Chave JWT não configurada."));
+
+        var issuer = configuration["Jwt:Issuer"]
+            ?? throw new InvalidOperationException("Issuer JWT não configurado.");
+
+        var audience = configuration["Jwt:Audience"]
+            ?? throw new InvalidOperationException("Audience JWT não configurado.");
+
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+            new Claim(ClaimTypes.Name, usuario.Nome),
+            new Claim(ClaimTypes.Email, usuario.Email)
+        };
+
+        var credentials = new SigningCredentials(
+            new SymmetricSecurityKey(chave),
+            SecurityAlgorithms.HmacSha256);
+
+        var token = new JwtSecurityToken(
+            issuer: issuer,
+            audience: audience,
+            claims: claims,
+            expires: DateTime.UtcNow.AddHours(1),
+            signingCredentials: credentials);
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     private static UsuarioResponse ParaResponse(Usuario usuario) =>

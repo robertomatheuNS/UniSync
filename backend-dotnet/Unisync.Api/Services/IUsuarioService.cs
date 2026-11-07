@@ -7,6 +7,7 @@ public interface IUsuarioService
     Task<CriarUsuarioResultado> CriarAsync(CriarUsuarioRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<UsuarioResponse>> ListarAsync(CancellationToken cancellationToken);
     Task<UsuarioResponse?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken);
+    Task<string?> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
 }
 
 public enum CriarUsuarioStatus
