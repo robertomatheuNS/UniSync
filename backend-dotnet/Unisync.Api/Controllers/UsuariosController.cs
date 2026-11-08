@@ -37,13 +37,13 @@ public class UsuariosController(UsuarioServiceInterface usuarioService) : Contro
         return Ok(new { token });
     }
 
-    [Authorize]
+    [Authorize(Roles = "Professor")]
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<UsuarioResponse>>> Listar(
         CancellationToken cancellationToken) =>
         Ok(await usuarioService.ListarAsync(cancellationToken));
 
-    [Authorize]
+    [Authorize(Roles = "Professor")]
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<UsuarioResponse>> ObterPorId(
         Guid id,
