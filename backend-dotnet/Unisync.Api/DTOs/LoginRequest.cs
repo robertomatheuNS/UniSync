@@ -4,9 +4,10 @@ namespace Unisync.Api.DTOs;
 
 public class LoginRequest
 {
-    [Required, EmailAddress]
+    [Required(ErrorMessage = "O e-mail é obrigatório.")]
+    [EmailAddress(ErrorMessage = "Informe um endereço de e-mail válido.")]
     public string Email { get; set; } = string.Empty;
 
-    [Required]
+    [Required(ErrorMessage = "A senha é obrigatória.")]
     public string Senha { get; set; } = string.Empty;
 }
