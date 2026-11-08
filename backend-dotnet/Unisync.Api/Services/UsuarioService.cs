@@ -108,11 +108,14 @@ public class UsuarioService(
         var audience = configuration["Jwt:Audience"]
             ?? throw new InvalidOperationException("Audience JWT não configurado.");
 
+        var tipoUsuario = usuario is Professor ? "Professor" : "Aluno";
+
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-            new Claim(ClaimTypes.Name, usuario.Nome),
-            new Claim(ClaimTypes.Email, usuario.Email)
+        new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+        new Claim(ClaimTypes.Name, usuario.Nome),
+        new Claim(ClaimTypes.Email, usuario.Email),
+        new Claim(ClaimTypes.Role, tipoUsuario)
         };
 
         var credentials = new SigningCredentials(
