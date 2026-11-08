@@ -7,7 +7,6 @@ from src.database.connection import (
     desconectar_mongodb,
 )
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await conectar_mongodb()
@@ -16,14 +15,12 @@ async def lifespan(app: FastAPI):
 
     await desconectar_mongodb()
 
-
 app = FastAPI(
     title="UniSync - Motor de Oportunidades",
     description="API responsável pelo gerenciamento de oportunidades acadêmicas.",
     version="0.1.0",
     lifespan=lifespan,
 )
-
 
 @app.get("/health", tags=["Health"])
 async def health_check():
