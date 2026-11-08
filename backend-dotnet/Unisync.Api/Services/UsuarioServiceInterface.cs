@@ -2,7 +2,7 @@ using Unisync.Api.DTOs;
 
 namespace Unisync.Api.Services;
 
-public interface IUsuarioService
+public interface UsuarioServiceInterface
 {
     Task<CriarUsuarioResultado> CriarAsync(CriarUsuarioRequest request, CancellationToken cancellationToken);
     Task<IReadOnlyList<UsuarioResponse>> ListarAsync(CancellationToken cancellationToken);

@@ -5,7 +5,7 @@ using Unisync.Api.Entities;
 
 namespace Unisync.Api.Repositories;
 
-public class UsuarioRepository(AppDbContext context) : IUsuarioRepository
+public class UsuarioRepository(AppDbContext context) : UsuarioRepositoryInterface
 {
     public Task<bool> EmailExisteAsync(string email, CancellationToken cancellationToken) =>
         context.Usuarios.AsNoTracking().AnyAsync(usuario => usuario.Email == email, cancellationToken);

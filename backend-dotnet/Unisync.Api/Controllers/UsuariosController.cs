@@ -8,7 +8,7 @@ namespace Unisync.Api.Controllers;
 
 [ApiController]
 [Route("api/usuarios")]
-public class UsuariosController(IUsuarioService usuarioService) : ControllerBase
+public class UsuariosController(UsuarioServiceInterface usuarioService) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult<UsuarioResponse>> Criar(

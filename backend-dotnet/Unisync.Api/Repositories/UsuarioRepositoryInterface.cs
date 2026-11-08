@@ -2,7 +2,7 @@ using Unisync.Api.Entities;
 
 namespace Unisync.Api.Repositories;
 
-public interface IUsuarioRepository
+public interface UsuarioRepositoryInterface
 {
     Task<bool> EmailExisteAsync(string email, CancellationToken cancellationToken);
     Task<Usuario> AdicionarAsync(Usuario usuario, CancellationToken cancellationToken);
