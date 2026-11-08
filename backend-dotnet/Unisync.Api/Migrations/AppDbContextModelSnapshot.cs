@@ -28,9 +28,6 @@ namespace Unisync.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("DataCriacaoUtc")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(180)
@@ -46,6 +43,9 @@ namespace Unisync.Api.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("Tipo")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
@@ -53,6 +53,24 @@ namespace Unisync.Api.Migrations
                         .HasDatabaseName("IX_usuarios_Email");
 
                     b.ToTable("usuarios", (string)null);
+
+                    b.HasDiscriminator<int>("Tipo");
+
+                    b.UseTphMappingStrategy();
+                });
+
+            modelBuilder.Entity("Unisync.Api.Entities.Aluno", b =>
+                {
+                    b.HasBaseType("Unisync.Api.Entities.Usuario");
+
+                    b.HasDiscriminator().HasValue(1);
+                });
+
+            modelBuilder.Entity("Unisync.Api.Entities.Professor", b =>
+                {
+                    b.HasBaseType("Unisync.Api.Entities.Usuario");
+
+                    b.HasDiscriminator().HasValue(2);
                 });
 #pragma warning restore 612, 618
         }

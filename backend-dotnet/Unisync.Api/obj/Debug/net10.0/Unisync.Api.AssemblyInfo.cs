@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Unisync.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6066af2ddda7933663f5e84d715aff786a392954")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f4e7ecddb015c98c060c05cb9b8823b0a0d179c6")]
 [assembly: System.Reflection.AssemblyProductAttribute("Unisync.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Unisync.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
