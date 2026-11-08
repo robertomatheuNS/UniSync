@@ -1,0 +1,5 @@
+import pytest
+from src.schemas.oportunidade import OportunidadeCreate
+from pydantic import ValidationError
+
+test_para_rejeitar_titulo_curto
