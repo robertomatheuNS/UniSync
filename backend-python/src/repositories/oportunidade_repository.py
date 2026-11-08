@@ -13,8 +13,9 @@ async def buscar_oportunidade_por_id(oportunidade_id: PydanticObjectId):
     return await Oportunidade.get(oportunidade_id)
 
 async def atualizar_oportunidade(oportunidade: Oportunidade, novos_dados: dict):
-    for chave, valor in novos_dados.items():
-        setattr(oportunidade, chave, valor)
+
+    for atributo, valor in novos_dados.items():
+        setattr(oportunidade, atributo, valor)
 
     await oportunidade.save()
 
@@ -22,4 +23,3 @@ async def atualizar_oportunidade(oportunidade: Oportunidade, novos_dados: dict):
 
 async def excluir_oportunidade(oportunidade: Oportunidade):
     await oportunidade.delete()
-    return True

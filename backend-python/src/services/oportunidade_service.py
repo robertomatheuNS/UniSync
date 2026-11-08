@@ -18,13 +18,16 @@ async def buscar_oportunidade_por_id(id: PydanticObjectId):
     return await oportunidade_repository.buscar_oportunidade_por_id(id)
 
 async def atualizar_oportunidade(oportunidade_id: PydanticObjectId, dados_atualizados: OportunidadeUpdate):
+    
+    dados_novos = dados_atualizados.model_dump(exclude_unset=True)
+
+    if not dados_novos:
+        raise ValueError("Nenhum campo foi informado")
 
     oportunidade = await oportunidade_repository.buscar_oportunidade_por_id(oportunidade_id)
 
     if oportunidade is None:
         return None
-
-    dados_novos = dados_atualizados.model_dump(exclude_unset=True)
 
     return await oportunidade_repository.atualizar_oportunidade(oportunidade, dados_novos)
 
