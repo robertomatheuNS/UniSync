@@ -1,5 +1,5 @@
 from contextlib import asynccontextmanager
-
+from src.routers import oportunidades
 from fastapi import FastAPI
 
 from src.database.connection import (
@@ -21,6 +21,8 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+app.include_router(oportunidades.router)
 
 @app.get("/health", tags=["Health"])
 async def health_check():
