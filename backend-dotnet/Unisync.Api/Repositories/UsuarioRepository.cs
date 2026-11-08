@@ -28,6 +28,48 @@ public class UsuarioRepository(AppDbContext context) : UsuarioRepositoryInterfac
         }
     }
 
+    public async Task<bool> AdicionarProfessorComCodigoAsync(
+        Professor professor,
+        string codigoProfessor,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(codigoProfessor))
+        {
+            return false;
+        }
+
+        await using var transacao = await context.Database.BeginTransactionAsync(cancellationToken);
+
+        var codigosConsumidos = await context.Database.ExecuteSqlInterpolatedAsync($"""
+            UPDATE public."Codigo_professor"
+            SET ultilizado = TRUE
+            WHERE codigo::text = {codigoProfessor}
+              AND ultilizado = FALSE
+              AND (
+                  SELECT COUNT(*)
+                  FROM public."Codigo_professor"
+                  WHERE codigo::text = {codigoProfessor}
+              ) = 1
+            """, cancellationToken);
+
+        if (codigosConsumidos != 1)
+        {
+            return false;
+        }
+
+        try
+        {
+            await AdicionarAsync(professor, cancellationToken);
+            await transacao.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            context.Entry(professor).State = EntityState.Detached;
+            throw;
+        }
+    }
+
     public Task<Usuario?> ObterPorIdAsync(Guid id, CancellationToken cancellationToken) =>
         context.Usuarios.AsNoTracking().SingleOrDefaultAsync(usuario => usuario.Id == id, cancellationToken);
 
