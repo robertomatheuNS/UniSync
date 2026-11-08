@@ -1,13 +1,11 @@
 from datetime import datetime
 
-data: datetime
-
 from beanie import Document
 
 class Oportunidade(Document):
     titulo: str
     professor: str
-    descricao: str
+    descricao: str | None
     tipo: str
     data_evento: datetime
 
