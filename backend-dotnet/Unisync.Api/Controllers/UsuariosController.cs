@@ -13,19 +13,14 @@ public class UsuariosController(UsuarioServiceInterface usuarioService) : Contro
     [HttpPost]
     public async Task<ActionResult<UsuarioResponse>> Criar(
         CriarUsuarioRequest request,
-        CancellationToken cancellationToken)
-    {
-        var resultado = await usuarioService.CriarAsync(request, cancellationToken);
-        if (resultado.Status == CriarUsuarioStatus.EmailJaCadastrado)
-        {
-            return Conflict(new { mensagem = "O e-mail informado já está cadastrado." });
-        }
+        CancellationToken cancellationToken) =>
+        ResponderCriacao(await usuarioService.CriarAsync(request, cancellationToken));
 
-        return CreatedAtAction(
-            nameof(ObterPorId),
-            new { id = resultado.Usuario!.Id },
-            resultado.Usuario);
-    }
+    [HttpPost("professores")]
+    public async Task<ActionResult<UsuarioResponse>> CriarProfessor(
+        CriarProfessorRequest request,
+        CancellationToken cancellationToken) =>
+        ResponderCriacao(await usuarioService.CriarProfessorAsync(request, cancellationToken));
 
     [HttpPost("login")]
     public async Task<IActionResult> Login(
@@ -57,4 +52,16 @@ public class UsuariosController(UsuarioServiceInterface usuarioService) : Contro
         var usuario = await usuarioService.ObterPorIdAsync(id, cancellationToken);
         return usuario is null ? NotFound() : Ok(usuario);
     }
+
+    private ActionResult<UsuarioResponse> ResponderCriacao(CriarUsuarioResultado resultado) =>
+        resultado.Status switch
+        {
+            CriarUsuarioStatus.Criado when resultado.Usuario is { } usuario =>
+                CreatedAtAction(nameof(ObterPorId), new { id = usuario.Id }, usuario),
+            CriarUsuarioStatus.EmailJaCadastrado =>
+                Conflict(new { mensagem = "O e-mail informado já está cadastrado." }),
+            CriarUsuarioStatus.CodigoProfessorIndisponivel =>
+                BadRequest(new { mensagem = "O código de professor informado é inválido ou já foi usado." }),
+            _ => throw new InvalidOperationException("Resultado de cadastro inesperado.")
+        };
 }

@@ -15,9 +15,30 @@ public class UsuarioService(
     IPasswordHasher<Usuario> passwordHasher,
     IConfiguration configuration) : UsuarioServiceInterface
 {
-    public async Task<CriarUsuarioResultado> CriarAsync(
+    public Task<CriarUsuarioResultado> CriarAsync(
         CriarUsuarioRequest request,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken) =>
+        CriarUsuarioAsync(
+            request,
+            static (nome, email) => new Aluno(nome, email),
+            async (aluno, token) => await usuarioRepository.AdicionarAsync(aluno, token),
+            cancellationToken);
+
+    public Task<CriarUsuarioResultado> CriarProfessorAsync(
+        CriarProfessorRequest request,
+        CancellationToken cancellationToken) =>
+        CriarUsuarioAsync(
+            request,
+            static (nome, email) => new Professor(nome, email),
+            async (professor, token) => await usuarioRepository.AdicionarProfessorComCodigoAsync(
+                professor, request.CodigoProfessor, token) ? professor : null,
+            cancellationToken);
+
+    private async Task<CriarUsuarioResultado> CriarUsuarioAsync<TUsuario>(
+        CriarUsuarioRequest request,
+        Func<string, string, TUsuario> criarUsuario,
+        Func<TUsuario, CancellationToken, Task<Usuario?>> persistirUsuario,
+        CancellationToken cancellationToken) where TUsuario : Usuario
     {
         var nome = request.Nome.Trim();
         var email = request.Email.Trim().ToLowerInvariant();
@@ -27,19 +48,20 @@ public class UsuarioService(
             return new CriarUsuarioResultado(CriarUsuarioStatus.EmailJaCadastrado, null);
         }
 
-        Usuario usuario = new Aluno(nome, email);
+        var usuario = criarUsuario(nome, email);
         usuario.DefinirSenhaHash(passwordHasher.HashPassword(usuario, request.Senha));
 
         try
         {
-            usuario = await usuarioRepository.AdicionarAsync(usuario, cancellationToken);
+            var usuarioPersistido = await persistirUsuario(usuario, cancellationToken);
+            return usuarioPersistido is null
+                ? new CriarUsuarioResultado(CriarUsuarioStatus.CodigoProfessorIndisponivel, null)
+                : new CriarUsuarioResultado(CriarUsuarioStatus.Criado, ParaResponse(usuarioPersistido));
         }
         catch (EmailUsuarioJaCadastradoException)
         {
             return new CriarUsuarioResultado(CriarUsuarioStatus.EmailJaCadastrado, null);
         }
-
-        return new CriarUsuarioResultado(CriarUsuarioStatus.Criado, ParaResponse(usuario));
     }
 
     public async Task<IReadOnlyList<UsuarioResponse>> ListarAsync(CancellationToken cancellationToken)
