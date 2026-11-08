@@ -11,8 +11,8 @@ async def criar_oportunidade(oportunidade: OportunidadeCreate):
 
     return await oportunidade_repository.criar_oportunidade(nova_oportunidade)
 
-async def listar_oportunidades():
-    return await oportunidade_repository.listar_oportunidades()
+async def listar_oportunidades(tipo: str | None = None):
+    return await oportunidade_repository.listar_oportunidades(tipo=tipo)
 
 async def buscar_oportunidade_por_id(id: PydanticObjectId):
     return await oportunidade_repository.buscar_oportunidade_por_id(id)
