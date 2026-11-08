@@ -13,8 +13,8 @@ async def criar_oportunidade(oportunidade: OportunidadeCreate):
     return await oportunidade_service.criar_oportunidade(oportunidade)
 
 @router.get("/listar", response_model=list[OportunidadeResponse])
-async def listar_oportunidades():
-    return await oportunidade_service.listar_oportunidades()
+async def listar_oportunidades(tipo: str | None = None):
+    return await oportunidade_service.listar_oportunidades(tipo=tipo)
 
 @router.get("/buscar/{oportunidade_id}", response_model=OportunidadeResponse)
 async def buscar_oportunidade_por_id(oportunidade_id: PydanticObjectId):
