@@ -11,9 +11,9 @@ using Unisync.Api.Repositories;
 namespace Unisync.Api.Services;
 
 public class UsuarioService(
-    IUsuarioRepository usuarioRepository,
+    UsuarioRepositoryInterface usuarioRepository,
     IPasswordHasher<Usuario> passwordHasher,
-    IConfiguration configuration) : IUsuarioService
+    IConfiguration configuration) : UsuarioServiceInterface
 {
     public async Task<CriarUsuarioResultado> CriarAsync(
         CriarUsuarioRequest request,
@@ -27,7 +27,7 @@ public class UsuarioService(
             return new CriarUsuarioResultado(CriarUsuarioStatus.EmailJaCadastrado, null);
         }
 
-        var usuario = new Usuario(nome, email);
+        Usuario usuario = new Aluno(nome, email);
         usuario.DefinirSenhaHash(passwordHasher.HashPassword(usuario, request.Senha));
 
         try
@@ -108,5 +108,5 @@ public class UsuarioService(
     }
 
     private static UsuarioResponse ParaResponse(Usuario usuario) =>
-        new(usuario.Id, usuario.Nome, usuario.Email, usuario.DataCriacaoUtc);
+        new(usuario.Id, usuario.Nome, usuario.Email);
 }
