@@ -62,6 +62,12 @@ async def atualizar_oportunidade(oportunidade_id: PydanticObjectId, dados_atuali
 
         return resultado
 
+    except ValueError as erro:
+        raise HTTPException(
+            status_code=400,
+            detail=str(erro),
+        ) from erro
+
     except PermissionError as erro:
         raise HTTPException(
             status_code=403,
