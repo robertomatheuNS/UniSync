@@ -14,24 +14,34 @@
         <h1>UniSync</h1>
         <h2>Entrar</h2>
 
-        <form method="post">
+        {% if login_valido %}
+            <p>Dados preenchidos corretamente.</p>
+        {% endif %}
+
+        <form method="post" novalidate>
             {% csrf_token %}
 
-            <label for="email">E-mail</label>
-            <input
-                type="email"
-                id="email"
-                name="email"
-                required
-            >
+            {{ form.non_field_errors }}
 
-            <label for="senha">Senha</label>
-            <input
-                type="password"
-                id="senha"
-                name="senha"
-                required
-            >
+            <label for="{{ form.email.id_for_label }}">
+                E-mail
+            </label>
+
+            {{ form.email }}
+
+            {% for erro in form.email.errors %}
+                <p>{{ erro }}</p>
+            {% endfor %}
+
+            <label for="{{ form.senha.id_for_label }}">
+                Senha
+            </label>
+
+            {{ form.senha }}
+
+            {% for erro in form.senha.errors %}
+                <p>{{ erro }}</p>
+            {% endfor %}
 
             <button type="submit">
                 Entrar
@@ -40,6 +50,5 @@
     </main>
 
     <script src="{% static 'authentication/js/login.js' %}"></script>
-    
 </body>
 </html>
