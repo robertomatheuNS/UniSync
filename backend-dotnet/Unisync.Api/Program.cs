@@ -11,6 +11,12 @@ using Unisync.Api.Entities;
 using Unisync.Api.Repositories;
 using Unisync.Api.Services;
 
+if (args is [SubirNeon.Nome, ..])
+{
+    Environment.ExitCode = await SubirNeon.ExecutarAsync(args);
+    return;
+}
+
 var gerarCodigosProfessor = args is [GerarCodigosProfessor.Nome, ..];
 var builder = WebApplication.CreateBuilder(gerarCodigosProfessor ? [] : args);
 
