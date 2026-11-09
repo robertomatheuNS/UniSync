@@ -13,13 +13,17 @@ public class AppDbContextFactory : IDesignTimeDbContextFactory<AppDbContext>
             .AddJsonFile("appsettings.json")
             .AddJsonFile("appsettings.Development.json", optional: true)
             .AddUserSecrets<AppDbContextFactory>()
+            .AddEnvironmentVariables()
             .Build();
 
-        var connectionString = configuration.GetConnectionString("DefaultConnection");
+        var usaNeon = !string.IsNullOrWhiteSpace(configuration.GetConnectionString("Neon"));
+        var chaveConexao = usaNeon ? "NeonDirect" : "DefaultConnection";
+        var connectionString = configuration.GetConnectionString(chaveConexao);
+
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException(
-                "A connection string DefaultConnection não está configurada nos User Secrets.");
+                $"A conexão com o PostgreSQL não está configurada. Defina ConnectionStrings:{chaveConexao}.");
         }
 
         var options = new DbContextOptionsBuilder<AppDbContext>()

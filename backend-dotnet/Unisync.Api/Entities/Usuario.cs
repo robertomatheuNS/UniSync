@@ -1,21 +1,20 @@
 namespace Unisync.Api.Entities;
 
-public class Usuario
+public abstract class Usuario
 {
     public Guid Id { get; private set; } = Guid.NewGuid();
     public string Nome { get; private set; } = string.Empty;
     public string Email { get; private set; } = string.Empty;
     public string SenhaHash { get; private set; } = string.Empty;
-    public DateTime DataCriacaoUtc { get; private set; } = DateTime.UtcNow;
 
-    private Usuario()
+    protected Usuario()
     {
     }
 
-    public Usuario(string nome, string email)
+    protected Usuario(string nome, string email)
     {
         Nome = ValidarTexto(nome, nameof(nome), 2, 100);
-        Email = ValidarTexto(email, nameof(email), 1, 180);
+        Email = ValidarTexto(email, nameof(email), 1, 180).ToLowerInvariant();
     }
 
     public void DefinirSenhaHash(string senhaHash)
