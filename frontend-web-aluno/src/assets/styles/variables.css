@@ -1,0 +1,31 @@
+:root {
+  /* Cores do design */
+  --color-header: #8fd3ec;
+  --color-sidebar: #edf1f5;
+  --color-card: #c9d1da;
+  --color-background: #f7f7fb;
+  --color-text: #1a1a1a;
+  --color-text-muted: #6b7280;
+  --color-primary: #000000;
+  --color-on-primary: #ffffff;
+  --color-accent: #2f5bff;
+
+  /* Espaçamentos */
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 2rem;
+
+  /* Bordas */
+  --radius-md: 12px;
+  --radius-pill: 999px;
+
+  --font-main: 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Modo escuro: só redefinimos as variáveis. Será usado depois. */
+[data-theme='dark'] {
+  --color-background: #14161a;
+  --color-sidebar: #1d2026;
+  --color-card: #2a2f38;
+  --color-text: #f1f1f1;
+}
