@@ -4,3 +4,4 @@ beanie
 pydantic-settings
 pytest
 httpx
+PyJWT[crypto]
