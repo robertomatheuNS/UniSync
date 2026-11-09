@@ -84,7 +84,13 @@ def test_listar_oportunidades_com_filtro(monkeypatch):
     assert len(resposta.json()) == 1
     assert resposta.json()[0]["tipo"] == "PALESTRA"
 
-    mock_listagem.assert_awaited_once_with(tipo="PALESTRA")
+    mock_listagem.assert_awaited_once_with(
+        tipo="PALESTRA",
+        professor=None,
+        futuros=False,
+        ordenar=False,
+        limite=None,
+    )
 
 
 def test_buscar_oportunidade_inexistente_retorna_404(monkeypatch):
@@ -140,3 +146,43 @@ def test_excluir_oportunidade_retorna_204(monkeypatch):
     assert resposta.status_code == 204
     assert resposta.content == b""
     mock_exclusao.assert_awaited_once()
+
+
+def test_listar_avisos_do_dashboard(monkeypatch):
+    mock_listagem = AsyncMock(
+        return_value=[oportunidade_salva()]
+    )
+
+    monkeypatch.setattr(
+        oportunidade_service,
+        "listar_oportunidades",
+        mock_listagem,
+    )
+
+    resposta = client.get(
+        "/oportunidades/listar",
+        params={
+            "futuros": "true",
+            "ordenar": "true",
+            "limite": 8,
+        },
+    )
+
+    assert resposta.status_code == 200
+
+    mock_listagem.assert_awaited_once_with(
+        tipo=None,
+        professor=None,
+        futuros=True,
+        ordenar=True,
+        limite=8,
+    )
+
+
+def test_rejeitar_limite_invalido():
+    resposta = client.get(
+        "/oportunidades/listar",
+        params={"limite": -1},
+    )
+
+    assert resposta.status_code == 422
