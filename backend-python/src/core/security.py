@@ -99,3 +99,16 @@ def obter_usuario_atual(
         )
 
     return validar_token(credenciais.credentials)
+
+
+def exigir_professor(
+    usuario: UsuarioAutenticado = Depends(obter_usuario_atual),
+) -> UsuarioAutenticado:
+
+    if usuario.papel != "Professor":
+        raise HTTPException(
+            status_code=403,
+            detail="Acesso permitido apenas para professores",
+        )
+
+    return usuario
