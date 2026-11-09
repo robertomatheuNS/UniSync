@@ -9,7 +9,8 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
 {
     public void Configure(EntityTypeBuilder<Usuario> builder)
     {
-        builder.ToTable("usuarios");
+        builder.ToTable("usuarios", tabela =>
+            tabela.HasCheckConstraint("CK_usuarios_Tipo", "\"Tipo\" IN (1, 2)"));
         builder.HasKey(usuario => usuario.Id);
 
         builder.Property(usuario => usuario.Nome).IsRequired().HasMaxLength(100);

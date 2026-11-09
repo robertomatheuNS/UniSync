@@ -52,7 +52,10 @@ namespace Unisync.Api.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_usuarios_Email");
 
-                    b.ToTable("usuarios", (string)null);
+                    b.ToTable("usuarios", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_usuarios_Tipo", "\"Tipo\" IN (1, 2)");
+                        });
 
                     b.HasDiscriminator<int>("Tipo");
 
@@ -63,12 +66,22 @@ namespace Unisync.Api.Migrations
                 {
                     b.HasBaseType("Unisync.Api.Entities.Usuario");
 
+                    b.ToTable(t =>
+                        {
+                            t.HasCheckConstraint("CK_usuarios_Tipo", "\"Tipo\" IN (1, 2)");
+                        });
+
                     b.HasDiscriminator().HasValue(1);
                 });
 
             modelBuilder.Entity("Unisync.Api.Entities.Professor", b =>
                 {
                     b.HasBaseType("Unisync.Api.Entities.Usuario");
+
+                    b.ToTable(t =>
+                        {
+                            t.HasCheckConstraint("CK_usuarios_Tipo", "\"Tipo\" IN (1, 2)");
+                        });
 
                     b.HasDiscriminator().HasValue(2);
                 });
