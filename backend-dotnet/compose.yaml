@@ -1,0 +1,32 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: unisync_dev
+      POSTGRES_USER: unisync
+      POSTGRES_PASSWORD: unisync_dev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U unisync -d unisync_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  api:
+    build: ./Unisync.Api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Database=unisync_dev;Username=unisync;Password=unisync_dev
+      Jwt__Key: ${UNISYNC_JWT_KEY:?Defina UNISYNC_JWT_KEY no arquivo .env ou no ambiente}
+      Jwt__Issuer: UniSync
+      Jwt__Audience: UniSync.Clients
+    ports:
+      - "127.0.0.1:${UNISYNC_PORT:-5040}:8080"
+
+volumes:
+  postgres-data:
