@@ -48,6 +48,15 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 builder.Services.AddOpenApi();
 
+var origensCors = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy => policy
+        .WithOrigins(origensCors.Where(origem => !string.IsNullOrWhiteSpace(origem) && origem != "*").ToArray())
+        .AllowAnyMethod()
+        .AllowAnyHeader());
+});
+
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
@@ -96,6 +105,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 

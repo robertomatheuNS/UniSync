@@ -12,6 +12,8 @@ namespace Unisync.Api.Tests;
 
 public sealed class ApiFixture : IAsyncLifetime
 {
+    public const string OrigemFrontend = "http://localhost:5173";
+
     private readonly PostgreSqlContainer postgres = new PostgreSqlBuilder("postgres:16").Build();
     private WebApplicationFactory<Program>? api;
 
@@ -67,7 +69,8 @@ public sealed class ApiFixture : IAsyncLifetime
                     ["ConnectionStrings:DefaultConnection"] = conexao,
                     ["Jwt:Key"] = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)),
                     ["Jwt:Issuer"] = "UniSync.Tests",
-                    ["Jwt:Audience"] = "UniSync.Tests"
+                    ["Jwt:Audience"] = "UniSync.Tests",
+                    ["Cors:AllowedOrigins:0"] = OrigemFrontend
                 }));
 
             return base.CreateHost(builder);

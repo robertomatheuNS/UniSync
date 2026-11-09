@@ -25,6 +25,7 @@ services:
       Jwt__Key: ${UNISYNC_JWT_KEY:?Defina UNISYNC_JWT_KEY no arquivo .env ou no ambiente}
       Jwt__Issuer: UniSync
       Jwt__Audience: UniSync.Clients
+      Cors__AllowedOrigins__0: ${UNISYNC_CORS_ORIGIN:-}
     ports:
       - "127.0.0.1:${UNISYNC_PORT:-5040}:8080"
 

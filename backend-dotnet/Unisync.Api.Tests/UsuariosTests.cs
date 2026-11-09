@@ -15,6 +15,43 @@ public sealed class UsuariosTests(ApiFixture api) : IClassFixture<ApiFixture>
     private const string Login = Usuarios + "/login";
     private const string Senha = "SenhaTeste123";
 
+    [Theory]
+    [InlineData(ApiFixture.OrigemFrontend, true)]
+    [InlineData("http://localhost:5174", false)]
+    public async Task PreflightDeLoginSoAutorizaOrigemConfigurada(string origem, bool permitida)
+    {
+        using var cliente = api.CriarCliente();
+        using var preflight = new HttpRequestMessage(HttpMethod.Options, Login);
+        preflight.Headers.Add("Origin", origem);
+        preflight.Headers.Add("Access-Control-Request-Method", "POST");
+        preflight.Headers.Add("Access-Control-Request-Headers", "content-type");
+
+        using var resposta = await cliente.SendAsync(preflight);
+        Assert.Equal(HttpStatusCode.NoContent, resposta.StatusCode);
+        if (permitida)
+        {
+            Assert.Equal(origem, Assert.Single(resposta.Headers.GetValues("Access-Control-Allow-Origin")));
+            Assert.Contains("POST", resposta.Headers.GetValues("Access-Control-Allow-Methods"));
+        }
+        else
+        {
+            Assert.False(resposta.Headers.Contains("Access-Control-Allow-Origin"));
+        }
+    }
+
+    [Fact]
+    public async Task OrigemAutorizadaRecebeCorsMesmoQuandoFaltaToken()
+    {
+        using var cliente = api.CriarCliente();
+        using var request = new HttpRequestMessage(HttpMethod.Get, Usuarios);
+        request.Headers.Add("Origin", ApiFixture.OrigemFrontend);
+
+        using var resposta = await cliente.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, resposta.StatusCode);
+        Assert.Equal(ApiFixture.OrigemFrontend,
+            Assert.Single(resposta.Headers.GetValues("Access-Control-Allow-Origin")));
+    }
+
     [Fact]
     public async Task AlunoPodeCadastrarEEntrarMasNaoPodeListarUsuarios()
     {
