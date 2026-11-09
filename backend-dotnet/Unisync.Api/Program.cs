@@ -5,12 +5,25 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Unisync.Api.Comandos;
 using Unisync.Api.Data;
 using Unisync.Api.Entities;
 using Unisync.Api.Repositories;
 using Unisync.Api.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+var gerarCodigosProfessor = args is [GerarCodigosProfessor.Nome, ..];
+var builder = WebApplication.CreateBuilder(gerarCodigosProfessor ? [] : args);
+
+var neonConnection = builder.Configuration.GetConnectionString("Neon");
+var connectionString = string.IsNullOrWhiteSpace(neonConnection)
+    ? builder.Configuration.GetConnectionString("DefaultConnection")
+    : neonConnection;
+
+if (gerarCodigosProfessor)
+{
+    Environment.ExitCode = await GerarCodigosProfessor.ExecutarAsync(args, connectionString);
+    return;
+}
 
 builder.Services.AddControllers();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -35,10 +48,6 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 builder.Services.AddOpenApi();
 
-var neonConnection = builder.Configuration.GetConnectionString("Neon");
-var connectionString = string.IsNullOrWhiteSpace(neonConnection)
-    ? builder.Configuration.GetConnectionString("DefaultConnection")
-    : neonConnection;
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
