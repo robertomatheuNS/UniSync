@@ -4,12 +4,15 @@ from src.repositories import oportunidade_repository
 from beanie import PydanticObjectId
 
 
-async def criar_oportunidade(oportunidade: OportunidadeCreate):
-    dados_da_oportunidade = oportunidade.model_dump()
+async def criar_oportunidade(oportunidade: OportunidadeCreate, professor_id: str):
+    dados = oportunidade.model_dump()
+    dados["professor_id"] = professor_id
 
-    nova_oportunidade = Oportunidade(**dados_da_oportunidade)
+    nova_oportunidade = Oportunidade(**dados)
 
-    return await oportunidade_repository.criar_oportunidade(nova_oportunidade)
+    return await oportunidade_repository.criar_oportunidade(
+        nova_oportunidade
+    )
 
 
 async def listar_oportunidades(
@@ -30,8 +33,8 @@ async def listar_oportunidades(
 async def buscar_oportunidade_por_id(id: PydanticObjectId):
     return await oportunidade_repository.buscar_oportunidade_por_id(id)
 
-async def atualizar_oportunidade(oportunidade_id: PydanticObjectId, dados_atualizados: OportunidadeUpdate):
-    
+
+async def atualizar_oportunidade(oportunidade_id: PydanticObjectId, dados_atualizados: OportunidadeUpdate, professor_id: str):
     dados_novos = dados_atualizados.model_dump(exclude_unset=True)
 
     if not dados_novos:
@@ -42,14 +45,28 @@ async def atualizar_oportunidade(oportunidade_id: PydanticObjectId, dados_atuali
     if oportunidade is None:
         return None
 
-    return await oportunidade_repository.atualizar_oportunidade(oportunidade, dados_novos)
+    if oportunidade.professor_id != professor_id:
+        raise PermissionError(
+            "Você não tem permissão para alterar esta oportunidade"
+        )
 
-async def excluir_oportunidade(oportunidade_id: PydanticObjectId):
+    return await oportunidade_repository.atualizar_oportunidade(oportunidade, dados_novos,)
+
+
+
+async def excluir_oportunidade(oportunidade_id: PydanticObjectId, professor_id: str):
     oportunidade = await oportunidade_repository.buscar_oportunidade_por_id(oportunidade_id)
 
     if oportunidade is None:
         return False
 
-    await oportunidade_repository.excluir_oportunidade(oportunidade)
+    if oportunidade.professor_id != professor_id:
+        raise PermissionError(
+            "Você não tem permissão para excluir esta oportunidade"
+        )
+
+    await oportunidade_repository.excluir_oportunidade(
+        oportunidade
+    )
 
     return True
