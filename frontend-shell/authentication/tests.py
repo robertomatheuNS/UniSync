@@ -1,60 +1,69 @@
-from django.test import TestCase
-from django.urls import reverse
+from unittest.mock import Mock, patch
+
+import requests
+from django.test import TestCase, override_settings
+
+from .services.auth_service import AuthenticationService
 
 
 class AuthenticationTests(TestCase):
-    def test_login_page_loads(self):
-        response = self.client.get(reverse("login"))
+    @override_settings(
+        AUTH_MOCK=False,
+        API_BASE_URL="https://localhost:7129",
+    )
+    @patch("authentication.services.auth_service.requests.post")
+    def test_api_login_success(self, mock_post):
+        response_api = Mock()
+        response_api.status_code = 200
+        response_api.json.return_value = {
+            "token": "token-real-de-teste",
+        }
+        mock_post.return_value = response_api
 
-        self.assertEqual(response.status_code, 200)
-
-    def test_login_with_invalid_credentials(self):
-        response = self.client.post(
-            reverse("login"),
-            {
-                "email": "usuario@teste.com",
-                "senha": "senha-invalida",
-            },
+        resultado = AuthenticationService().login(
+            email="usuario@teste.com",
+            senha="123456",
         )
 
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "E-mail ou senha inválidos.")
+        self.assertTrue(resultado.success)
+        self.assertEqual(resultado.token, "token-real-de-teste")
 
-    def test_login_with_valid_credentials(self):
-        response = self.client.post(
-            reverse("login"),
-            {
-                "email": "teste@unisync.com",
-                "senha": "123456",
-            },
+    @override_settings(
+        AUTH_MOCK=False,
+        API_BASE_URL="https://localhost:7129",
+    )
+    @patch("authentication.services.auth_service.requests.post")
+    def test_api_login_invalid_credentials(self, mock_post):
+        response_api = Mock()
+        response_api.status_code = 401
+        mock_post.return_value = response_api
+
+        resultado = AuthenticationService().login(
+            email="usuario@teste.com",
+            senha="senha-invalida",
         )
 
-        self.assertRedirects(response, reverse("dashboard"))
-        self.assertIn("auth_token", self.client.session)
+        self.assertFalse(resultado.success)
+        self.assertEqual(
+            resultado.message,
+            "E-mail ou senha inválidos.",
+        )
 
-    def test_dashboard_requires_authentication(self):
-        response = self.client.get(reverse("dashboard"))
+    @override_settings(
+        AUTH_MOCK=False,
+        API_BASE_URL="https://localhost:7129",
+    )
+    @patch("authentication.services.auth_service.requests.post")
+    def test_api_login_connection_error(self, mock_post):
+        mock_post.side_effect = requests.RequestException
 
-        self.assertRedirects(response, reverse("login"))
+        resultado = AuthenticationService().login(
+            email="usuario@teste.com",
+            senha="123456",
+        )
 
-    def test_authenticated_user_can_access_dashboard(self):
-        self.client.login()
-
-        session = self.client.session
-        session["auth_token"] = "token-de-desenvolvimento"
-        session.save()
-
-        response = self.client.get(reverse("dashboard"))
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Você está autenticado.")
-
-    def test_logout_clears_session(self):
-        session = self.client.session
-        session["auth_token"] = "token-de-desenvolvimento"
-        session.save()
-
-        response = self.client.get(reverse("logout"))
-
-        self.assertRedirects(response, reverse("login"))
-        self.assertNotIn("auth_token", self.client.session)
+        self.assertFalse(resultado.success)
+        self.assertEqual(
+            resultado.message,
+            "Não foi possível conectar ao serviço de autenticação.",
+        )
