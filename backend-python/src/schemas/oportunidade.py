@@ -33,6 +33,7 @@ class OportunidadeUpdate(BaseModel):
 
 class OportunidadeResponse(BaseModel):
     id: PydanticObjectId
+    professor_id: str | None = None
     titulo: str = Field(min_length=5, max_length=100)
     professor: str
     materia: str
