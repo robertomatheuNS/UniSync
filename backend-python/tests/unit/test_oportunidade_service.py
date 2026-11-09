@@ -181,7 +181,13 @@ def test_listar_oportunidades_com_filtro(monkeypatch):
     )
 
     assert resultado is oportunidades
-    mock_listagem.assert_awaited_once_with(tipo="MONITORIA")
+    mock_listagem.assert_awaited_once_with(
+        tipo="MONITORIA",
+        professor=None,
+        futuros=False,
+        ordenar=False,
+        limite=None,
+    )
 
 
 def test_listar_todas_as_oportunidades(monkeypatch):
@@ -200,4 +206,10 @@ def test_listar_todas_as_oportunidades(monkeypatch):
     )
 
     assert resultado is oportunidades
-    mock_listagem.assert_awaited_once_with(tipo=None)
+    mock_listagem.assert_awaited_once_with(
+        tipo=None,
+        professor=None,
+        futuros=False,
+        ordenar=False,
+        limite=None,
+    )

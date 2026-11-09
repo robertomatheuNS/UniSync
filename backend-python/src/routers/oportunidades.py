@@ -1,6 +1,7 @@
 from beanie import PydanticObjectId
 from fastapi import APIRouter, HTTPException
 from src.schemas.oportunidade import OportunidadeCreate, OportunidadeResponse, OportunidadeUpdate
+from fastapi import APIRouter, HTTPException, Query
 from src.services import oportunidade_service
 
 router = APIRouter(
@@ -12,9 +13,23 @@ router = APIRouter(
 async def criar_oportunidade(oportunidade: OportunidadeCreate):
     return await oportunidade_service.criar_oportunidade(oportunidade)
 
+
 @router.get("/listar", response_model=list[OportunidadeResponse])
-async def listar_oportunidades(tipo: str | None = None):
-    return await oportunidade_service.listar_oportunidades(tipo=tipo)
+async def listar_oportunidades(
+    tipo: str | None = None,
+    professor: str | None = None,
+    futuros: bool = False,
+    ordenar: bool = False,
+    limite: int | None = Query(default=None, ge=1, le=100),
+):
+    return await oportunidade_service.listar_oportunidades(
+        tipo=tipo,
+        professor=professor,
+        futuros=futuros,
+        ordenar=ordenar,
+        limite=limite,
+    )
+
 
 @router.get("/buscar/{oportunidade_id}", response_model=OportunidadeResponse)
 async def buscar_oportunidade_por_id(oportunidade_id: PydanticObjectId):
