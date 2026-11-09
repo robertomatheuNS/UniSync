@@ -5,6 +5,9 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from src.routers import oportunidades
 from src.services import oportunidade_service
+from uuid import uuid4
+import pytest
+from src.core.security import (UsuarioAutenticado, exigir_professor, obter_usuario_atual)
 
 
 ID_VALIDO = "507f1f77bcf86cd799439011"
@@ -33,8 +36,27 @@ app_teste.include_router(oportunidades.router)
 
 client = TestClient(app_teste)
 
+@pytest.fixture
+def professor_autenticado():
+    professor = UsuarioAutenticado(
+        id=uuid4(),
+        nome="Professor Teste",
+        papel="Professor",
+    )
 
-def test_criar_oportunidade_retorna_201(monkeypatch):
+    app_teste.dependency_overrides[exigir_professor] = (
+        lambda: professor
+    )
+
+    yield professor
+
+    app_teste.dependency_overrides.pop(
+        exigir_professor,
+        None,
+    )
+
+
+def test_criar_oportunidade_retorna_201(monkeypatch, professor_autenticado):
     mock_criacao = AsyncMock(return_value=oportunidade_salva())
 
     monkeypatch.setattr(
@@ -53,7 +75,7 @@ def test_criar_oportunidade_retorna_201(monkeypatch):
     mock_criacao.assert_awaited_once()
 
 
-def test_criar_oportunidade_invalida_retorna_422():
+def test_criar_oportunidade_invalida_retorna_422(professor_autenticado):
     dados = dados_oportunidade()
     dados["titulo"] = "abc"
 
@@ -110,7 +132,7 @@ def test_buscar_oportunidade_inexistente_retorna_404(monkeypatch):
     mock_busca.assert_awaited_once()
 
 
-def test_atualizacao_sem_campos_retorna_400(monkeypatch):
+def test_atualizacao_sem_campos_retorna_400(monkeypatch, professor_autenticado):
     mock_atualizacao = AsyncMock(
         side_effect=ValueError("Nenhum campo foi informado")
     )
@@ -130,7 +152,7 @@ def test_atualizacao_sem_campos_retorna_400(monkeypatch):
     assert resposta.json()["detail"] == "Nenhum campo foi informado"
 
 
-def test_excluir_oportunidade_retorna_204(monkeypatch):
+def test_excluir_oportunidade_retorna_204(monkeypatch, professor_autenticado):
     mock_exclusao = AsyncMock(return_value=True)
 
     monkeypatch.setattr(
@@ -186,3 +208,38 @@ def test_rejeitar_limite_invalido():
     )
 
     assert resposta.status_code == 422
+
+
+def test_criar_sem_token_retorna_401():
+    resposta = client.post(
+        "/oportunidades/criar",
+        json=dados_oportunidade(),
+    )
+
+    assert resposta.status_code == 401
+
+
+def test_aluno_nao_pode_criar_oportunidade():
+    aluno = UsuarioAutenticado(
+        id=uuid4(),
+        nome="Aluno Teste",
+        papel="Aluno",
+    )
+
+    app_teste.dependency_overrides[obter_usuario_atual] = (
+        lambda: aluno
+    )
+
+    try:
+        resposta = client.post(
+            "/oportunidades/criar",
+            json=dados_oportunidade(),
+        )
+
+        assert resposta.status_code == 403
+
+    finally:
+        app_teste.dependency_overrides.pop(
+            obter_usuario_atual,
+            None,
+        )
