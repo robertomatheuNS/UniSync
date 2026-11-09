@@ -1,10 +1,13 @@
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from .forms import LoginForm
 from .services.auth_service import AuthenticationService
 
 
 def login_view(request):
+    if request.session.get("auth_token"):
+        return redirect("dashboard")
+
     form = LoginForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
@@ -17,15 +20,7 @@ def login_view(request):
 
         if resultado.success and resultado.token:
             request.session["auth_token"] = resultado.token
-
-            return render(
-                request,
-                "authentication/login.html",
-                {
-                    "form": form,
-                    "login_valido": True,
-                },
-            )
+            return redirect("dashboard")
 
         form.add_error(
             None,
@@ -39,3 +34,15 @@ def login_view(request):
             "form": form,
         },
     )
+
+
+def dashboard_view(request):
+    if not request.session.get("auth_token"):
+        return redirect("login")
+
+    return render(request, "authentication/dashboard.html")
+
+
+def logout_view(request):
+    request.session.flush()
+    return redirect("login")
