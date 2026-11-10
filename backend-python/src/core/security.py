@@ -41,12 +41,13 @@ def credenciais_invalidas():
 
 
 def validar_token(token: str) -> UsuarioAutenticado:
-    chave = base64.b64decode(
+
+    try:
+        chave = base64.b64decode(
         settings.jwt_key,
         validate=True,
     )
 
-    try:
         payload = jwt.decode(
             token,
             key=chave,
@@ -58,9 +59,25 @@ def validar_token(token: str) -> UsuarioAutenticado:
             },
         )
 
-        usuario_id = UUID(payload[CLAIM_ID])
-        nome = payload[CLAIM_NAME]
-        papel = payload[CLAIM_ROLE]
+        def obter_claim(nome_completo: str, nome_curto: str):
+            valor = payload.get(nome_completo)
+
+            if valor is None:
+                valor = payload.get(nome_curto)
+
+            if valor is None:
+                raise ValueError(f"Claim obrigatória ausente: {nome_curto}")
+
+            return valor
+
+
+        usuario_id = UUID(
+            obter_claim(CLAIM_ID, "nameid")
+        )
+
+        nome = obter_claim(CLAIM_NAME, "unique_name")
+
+        papel = obter_claim(CLAIM_ROLE, "role")
 
         if not isinstance(nome, str) or not nome.strip():
             raise ValueError("Nome inválido")
@@ -79,6 +96,7 @@ def validar_token(token: str) -> UsuarioAutenticado:
         KeyError,
         ValueError,
         TypeError,
+        base64.binascii.Error,
     ) as erro:
         raise credenciais_invalidas() from erro
 
