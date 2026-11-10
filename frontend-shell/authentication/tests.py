@@ -122,3 +122,55 @@ class AuthenticationTests(TestCase):
             resultado.message,
             "Não foi possível conectar ao serviço de autenticação.",
         )
+
+    def test_register_mock_success(self):
+        resultado = AuthenticationService().register(
+            nome="Usuário de Teste",
+            email="novo@unisync.com",
+            senha="12345678",
+        )
+
+        self.assertTrue(resultado.success)
+        self.assertEqual(resultado.user["nome"], "Usuário de Teste")
+        self.assertEqual(resultado.user["email"], "novo@unisync.com")
+
+    def test_register_mock_existing_email(self):
+        resultado = AuthenticationService().register(
+            nome="Usuário Existente",
+            email="cadastrado@unisync.com",
+            senha="12345678",
+        )
+
+        self.assertFalse(resultado.success)
+        self.assertEqual(
+            resultado.message,
+            "O e-mail informado já está cadastrado.",
+        )
+
+    @override_settings(
+        AUTH_MOCK=False,
+        API_BASE_URL="https://localhost:7129",
+    )
+    @patch("authentication.services.auth_service.requests.post")
+    def test_api_register_success(self, mock_post):
+        response_api = Mock()
+        response_api.status_code = 201
+        response_api.json.return_value = {
+            "id": "usuario-de-teste",
+            "nome": "Usuário de Teste",
+            "email": "novo@unisync.com",
+            "dataCriacaoUtc": "2026-11-10T00:00:00Z",
+        }
+        mock_post.return_value = response_api
+
+        resultado = AuthenticationService().register(
+            nome="Usuário de Teste",
+            email="novo@unisync.com",
+            senha="12345678",
+        )
+
+        self.assertTrue(resultado.success)
+        self.assertEqual(
+            resultado.user["email"],
+            "novo@unisync.com",
+        )
