@@ -13,7 +13,8 @@
                 "oderwat.indent-rainbow",
                 "eamodio.gitlens",
                 "esbenp.prettier-vscode",
-                "dracula-theme.theme-dracula"
+                "dracula-theme.theme-dracula",
+                "rangav.vscode-thunder-client"
             ]
         }
     }
