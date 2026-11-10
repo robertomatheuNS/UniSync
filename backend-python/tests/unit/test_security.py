@@ -80,3 +80,28 @@ def test_rejeitar_token_invalido(monkeypatch):
         security.validar_token("token.invalido.aqui")
 
     assert erro.value.status_code == 401
+
+
+def test_aceitar_claims_abreviadas_do_dotnet(monkeypatch):
+    chave = configurar_jwt_teste(monkeypatch)
+    professor_id = uuid4()
+
+    token = jwt.encode(
+        {
+            "nameid": str(professor_id),
+            "unique_name": "Professor Teste",
+            "role": "Professor",
+            "iss": "UniSync.Auth",
+            "aud": "UniSync.Services",
+            "exp": datetime.now(timezone.utc)
+            + timedelta(hours=1),
+        },
+        chave,
+        algorithm="HS256",
+    )
+
+    usuario = security.validar_token(token)
+
+    assert usuario.id == professor_id
+    assert usuario.nome == "Professor Teste"
+    assert usuario.papel == "Professor"
