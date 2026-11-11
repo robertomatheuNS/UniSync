@@ -12,6 +12,7 @@ urlpatterns = [
         views.register_view,
         name="register_form",
     ),
+    path("app/", views.app_view, name="app"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("logout/", views.logout_view, name="logout"),
 ]
