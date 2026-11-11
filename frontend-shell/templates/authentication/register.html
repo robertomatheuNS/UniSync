@@ -1,0 +1,63 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro — UniSync</title>
+
+    <link rel="stylesheet" href="{% static 'authentication/css/login.css' %}">
+</head>
+<body>
+    <main>
+        <h1>UniSync</h1>
+        <h2>Criar cadastro</h2>
+
+        <form method="post" novalidate>
+            {% csrf_token %}
+
+            {{ form.non_field_errors }}
+
+            <label for="{{ form.nome.id_for_label }}">
+                Nome completo
+            </label>
+
+            {{ form.nome }}
+
+            {% for erro in form.nome.errors %}
+                <p>{{ erro }}</p>
+            {% endfor %}
+
+            <label for="{{ form.email.id_for_label }}">
+                E-mail
+            </label>
+
+            {{ form.email }}
+
+            {% for erro in form.email.errors %}
+                <p>{{ erro }}</p>
+            {% endfor %}
+
+            <label for="{{ form.senha.id_for_label }}">
+                Senha
+            </label>
+
+            {{ form.senha }}
+
+            {% for erro in form.senha.errors %}
+                <p>{{ erro }}</p>
+            {% endfor %}
+
+            <button type="submit">
+                Criar cadastro
+            </button>
+        </form>
+
+        <p>
+            Já possui cadastro?
+            <a href="{% url 'login' %}">Entrar</a>
+        </p>
+    </main>
+</body>
+</html>
