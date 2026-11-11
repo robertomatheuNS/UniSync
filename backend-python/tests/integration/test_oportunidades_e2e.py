@@ -69,11 +69,9 @@ def test_crud_com_mongodb_real():
         headers=headers,
     ) as client:
         try:
-            # 1. Verificar se o FastAPI está funcionando
             resposta = client.get("/health")
             assert resposta.status_code == 200
 
-            # 2. Criar oportunidade autenticada
             resposta = client.post(
                 "/oportunidades/criar",
                 json=dados,
@@ -86,14 +84,12 @@ def test_crud_com_mongodb_real():
             assert oportunidade["professor_id"] is not None
             assert oportunidade["titulo"] == titulo
 
-            # 3. Buscar oportunidade pelo ID
             resposta = client.get(
                 f"/oportunidades/buscar/{oportunidade_id}"
             )
             assert resposta.status_code == 200
             assert resposta.json()["titulo"] == titulo
 
-            # 4. Listar oportunidades pelo tipo
             resposta = client.get(
                 "/oportunidades/listar",
                 params={"tipo": "TESTE_INTEGRACAO"},
@@ -104,7 +100,6 @@ def test_crud_com_mongodb_real():
                 for item in resposta.json()
             )
 
-            # 5. Atualizar como professor proprietário
             resposta = client.patch(
                 f"/oportunidades/atualizar/{oportunidade_id}",
                 json={"titulo": titulo_atualizado},
@@ -112,20 +107,17 @@ def test_crud_com_mongodb_real():
             assert resposta.status_code == 200, resposta.text
             assert resposta.json()["titulo"] == titulo_atualizado
 
-            # 6. Confirmar atualização no banco
             resposta = client.get(
                 f"/oportunidades/buscar/{oportunidade_id}"
             )
             assert resposta.status_code == 200
             assert resposta.json()["titulo"] == titulo_atualizado
 
-            # 7. Excluir como professor proprietário
             resposta = client.delete(
                 f"/oportunidades/excluir/{oportunidade_id}"
             )
             assert resposta.status_code == 204, resposta.text
 
-            # 8. Confirmar que foi excluída
             resposta = client.get(
                 f"/oportunidades/buscar/{oportunidade_id}"
             )
@@ -134,7 +126,6 @@ def test_crud_com_mongodb_real():
             oportunidade_id = None
 
         finally:
-            # Limpeza se o teste falhar após a criação
             if oportunidade_id is not None:
                 client.delete(
                     f"/oportunidades/excluir/{oportunidade_id}"
