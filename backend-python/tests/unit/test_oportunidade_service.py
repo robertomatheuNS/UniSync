@@ -20,9 +20,7 @@ def test_rejeita_atualizacao_sem_campos():
 
     with pytest.raises(ValueError, match="Nenhum campo foi informado"):
         asyncio.run(
-            oportunidade_service.atualizar_oportunidade(
-                oportunidade_id, dados
-            )
+            oportunidade_service.atualizar_oportunidade(oportunidade_id, dados, professor_id="professor-123",)
         )
 
 
@@ -44,13 +42,16 @@ def test_buscar_oportunidade_inexistente(monkeypatch):
     mock_busca.assert_awaited_once_with(oportunidade_id)
 
 
+
 def test_atualizar_oportunidade_existente(monkeypatch):
     oportunidade_id = criar_id()
-    dados = OportunidadeUpdate(
-        titulo="Novo titulo da oportunidade"
-    )
+    professor_id = "professor-123"
+
+    dados = OportunidadeUpdate(titulo="Novo titulo da oportunidade")
 
     oportunidade_existente = Mock()
+    oportunidade_existente.professor_id = professor_id
+
     oportunidade_atualizada = Mock()
 
     mock_busca = AsyncMock(return_value=oportunidade_existente)
@@ -59,20 +60,32 @@ def test_atualizar_oportunidade_existente(monkeypatch):
     monkeypatch.setattr(
         oportunidade_repository,
         "buscar_oportunidade_por_id",
-        mock_busca
+        mock_busca,
     )
 
     monkeypatch.setattr(
         oportunidade_repository,
         "atualizar_oportunidade",
-        mock_atualizacao
+        mock_atualizacao,
     )
 
     resultado = asyncio.run(
         oportunidade_service.atualizar_oportunidade(
-            oportunidade_id, dados
+            oportunidade_id,
+            dados,
+            professor_id=professor_id,
         )
     )
+
+    assert resultado is oportunidade_atualizada
+
+    mock_busca.assert_awaited_once_with(oportunidade_id)
+
+    mock_atualizacao.assert_awaited_once_with(
+        oportunidade_existente,
+        {"titulo": "Novo titulo da oportunidade"},
+    )
+
 
     assert resultado is oportunidade_atualizada
     mock_busca.assert_awaited_once_with(oportunidade_id)
@@ -103,7 +116,9 @@ def test_atualizar_oportunidade_inexistente(monkeypatch):
 
     resultado = asyncio.run(
         oportunidade_service.atualizar_oportunidade(
-            oportunidade_id, dados
+            oportunidade_id,
+            dados,
+            professor_id="professor-123",
         )
     )
 
@@ -111,9 +126,13 @@ def test_atualizar_oportunidade_inexistente(monkeypatch):
     mock_atualizacao.assert_not_awaited()
 
 
+
 def test_excluir_oportunidade_existente(monkeypatch):
     oportunidade_id = criar_id()
+    professor_id = "professor-123"
+
     oportunidade_existente = Mock()
+    oportunidade_existente.professor_id = professor_id
 
     mock_busca = AsyncMock(return_value=oportunidade_existente)
     mock_exclusao = AsyncMock(return_value=True)
@@ -121,22 +140,27 @@ def test_excluir_oportunidade_existente(monkeypatch):
     monkeypatch.setattr(
         oportunidade_repository,
         "buscar_oportunidade_por_id",
-        mock_busca
+        mock_busca,
     )
 
     monkeypatch.setattr(
         oportunidade_repository,
         "excluir_oportunidade",
-        mock_exclusao
+        mock_exclusao,
     )
 
     resultado = asyncio.run(
-        oportunidade_service.excluir_oportunidade(oportunidade_id)
+        oportunidade_service.excluir_oportunidade(
+            oportunidade_id,
+            professor_id=professor_id,
+        )
     )
 
     assert resultado is True
+
     mock_busca.assert_awaited_once_with(oportunidade_id)
     mock_exclusao.assert_awaited_once_with(oportunidade_existente)
+
 
 
 def test_excluir_oportunidade_inexistente(monkeypatch):
@@ -158,7 +182,10 @@ def test_excluir_oportunidade_inexistente(monkeypatch):
     )
 
     resultado = asyncio.run(
-        oportunidade_service.excluir_oportunidade(oportunidade_id)
+        oportunidade_service.excluir_oportunidade(
+            oportunidade_id,
+            professor_id="professor-123",
+        )
     )
 
     assert resultado is False
@@ -213,3 +240,101 @@ def test_listar_todas_as_oportunidades(monkeypatch):
         ordenar=False,
         limite=None,
     )
+
+
+def test_impedir_atualizacao_por_outro_professor(monkeypatch):
+    oportunidade_id = criar_id()
+
+    oportunidade = Mock()
+    oportunidade.professor_id = "professor-123"
+
+    mock_busca = AsyncMock(return_value=oportunidade)
+    mock_atualizacao = AsyncMock()
+
+    monkeypatch.setattr(
+        oportunidade_repository,
+        "buscar_oportunidade_por_id",
+        mock_busca,
+    )
+
+    monkeypatch.setattr(
+        oportunidade_repository,
+        "atualizar_oportunidade",
+        mock_atualizacao,
+    )
+
+    with pytest.raises(PermissionError):
+        asyncio.run(
+            oportunidade_service.atualizar_oportunidade(
+                oportunidade_id,
+                OportunidadeUpdate(titulo="Novo titulo"),
+                professor_id="professor-456",
+            )
+        )
+
+    mock_atualizacao.assert_not_awaited()
+
+
+def test_impedir_exclusao_por_outro_professor(monkeypatch):
+    oportunidade_id = criar_id()
+
+    oportunidade = Mock()
+    oportunidade.professor_id = "professor-123"
+
+    mock_busca = AsyncMock(return_value=oportunidade)
+    mock_exclusao = AsyncMock()
+
+    monkeypatch.setattr(
+        oportunidade_repository,
+        "buscar_oportunidade_por_id",
+        mock_busca,
+    )
+
+    monkeypatch.setattr(
+        oportunidade_repository,
+        "excluir_oportunidade",
+        mock_exclusao,
+    )
+
+    with pytest.raises(PermissionError):
+        asyncio.run(
+            oportunidade_service.excluir_oportunidade(
+                oportunidade_id,
+                professor_id="professor-456",
+            )
+        )
+
+    mock_exclusao.assert_not_awaited()
+
+
+def test_impedir_atualizacao_sem_proprietario(monkeypatch):
+    oportunidade_id = criar_id()
+
+    oportunidade = Mock()
+    oportunidade.professor_id = None
+
+    mock_busca = AsyncMock(return_value=oportunidade)
+    mock_atualizacao = AsyncMock()
+
+    monkeypatch.setattr(
+        oportunidade_repository,
+        "buscar_oportunidade_por_id",
+        mock_busca,
+    )
+
+    monkeypatch.setattr(
+        oportunidade_repository,
+        "atualizar_oportunidade",
+        mock_atualizacao,
+    )
+
+    with pytest.raises(PermissionError):
+        asyncio.run(
+            oportunidade_service.atualizar_oportunidade(
+                oportunidade_id,
+                OportunidadeUpdate(titulo="Novo titulo"),
+                professor_id="professor-123",
+            )
+        )
+
+    mock_atualizacao.assert_not_awaited()

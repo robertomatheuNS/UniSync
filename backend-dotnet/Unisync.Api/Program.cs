@@ -5,12 +5,31 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Unisync.Api.Comandos;
 using Unisync.Api.Data;
 using Unisync.Api.Entities;
 using Unisync.Api.Repositories;
 using Unisync.Api.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+if (args is [SubirNeon.Nome, ..])
+{
+    Environment.ExitCode = await SubirNeon.ExecutarAsync(args);
+    return;
+}
+
+var gerarCodigosProfessor = args is [GerarCodigosProfessor.Nome, ..];
+var builder = WebApplication.CreateBuilder(gerarCodigosProfessor ? [] : args);
+
+var neonConnection = builder.Configuration.GetConnectionString("Neon");
+var connectionString = string.IsNullOrWhiteSpace(neonConnection)
+    ? builder.Configuration.GetConnectionString("DefaultConnection")
+    : neonConnection;
+
+if (gerarCodigosProfessor)
+{
+    Environment.ExitCode = await GerarCodigosProfessor.ExecutarAsync(args, connectionString);
+    return;
+}
 
 builder.Services.AddControllers();
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -35,11 +54,19 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 });
 builder.Services.AddOpenApi();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var origensCors = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy => policy
+        .WithOrigins(origensCors.Where(origem => !string.IsNullOrWhiteSpace(origem) && origem != "*").ToArray())
+        .AllowAnyMethod()
+        .AllowAnyHeader());
+});
+
 if (string.IsNullOrWhiteSpace(connectionString))
 {
     throw new InvalidOperationException(
-        "A conexão com o PostgreSQL não está configurada. Configure ConnectionStrings:DefaultConnection com User Secrets.");
+        "A conexão com o PostgreSQL não está configurada. Defina ConnectionStrings:Neon ou ConnectionStrings:DefaultConnection.");
 }
 
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
@@ -84,6 +111,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
