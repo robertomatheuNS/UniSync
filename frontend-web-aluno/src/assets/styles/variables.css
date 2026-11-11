@@ -20,6 +20,13 @@
   --radius-pill: 999px;
 
   --font-main: 'Helvetica Neue', Arial, sans-serif;
+
+  --gradient-landing: linear-gradient(
+  to bottom,
+  #ffffff 0%,
+  #e6fbff 60%,
+  var(--color-accent) 100%
+);
 }
 
 /* Modo escuro: só redefinimos as variáveis. Será usado depois. */
@@ -29,3 +36,4 @@
   --color-card: #2a2f38;
   --color-text: #f1f1f1;
 }
+

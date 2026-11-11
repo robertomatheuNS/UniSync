@@ -1,3 +1,11 @@
+<script setup>
+import HomeHero from '@/components/home/HomeHero.vue'
+import RoleSelector from '@/components/home/RoleSelector.vue'
+</script>
+
 <template>
-  <h1>Home</h1>
+  <main>
+    <HomeHero />
+    <RoleSelector />
+  </main>
 </template>
