@@ -5,6 +5,10 @@ from .forms import LoginForm, RegisterForm
 from .services.auth_service import AuthenticationService
 
 
+def home_view(request):
+    return render(request, "authentication/home.html")
+
+
 def login_view(request):
     if request.session.get("auth_token"):
         return redirect("dashboard")
@@ -35,11 +39,27 @@ def login_view(request):
     )
 
 
-def register_view(request):
+def register_choice_view(request):
     if request.session.get("auth_token"):
         return redirect("dashboard")
 
-    form = RegisterForm(request.POST or None)
+    return render(
+        request,
+        "authentication/register_choice.html",
+    )
+
+
+def register_view(request, tipo_usuario):
+    if request.session.get("auth_token"):
+        return redirect("dashboard")
+
+    if tipo_usuario not in {"aluno", "professor"}:
+        return redirect("register")
+
+    form = RegisterForm(
+        request.POST or None,
+        tipo_usuario=tipo_usuario,
+    )
 
     if request.method == "POST" and form.is_valid():
         service = AuthenticationService()
@@ -48,6 +68,8 @@ def register_view(request):
             nome=form.cleaned_data["nome"],
             email=form.cleaned_data["email"],
             senha=form.cleaned_data["senha"],
+            tipo_usuario=tipo_usuario,
+            codigo_professor=form.cleaned_data["codigo_professor"],
         )
 
         if resultado.success:
@@ -65,7 +87,10 @@ def register_view(request):
     return render(
         request,
         "authentication/register.html",
-        {"form": form},
+        {
+            "form": form,
+            "tipo_usuario": tipo_usuario,
+        },
     )
 
 

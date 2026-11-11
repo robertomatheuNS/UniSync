@@ -8,6 +8,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     form.addEventListener("submit", () => {
         button.disabled = true;
-        button.textContent = "Entrando...";
+        button.textContent = "Processando...";
     });
 });

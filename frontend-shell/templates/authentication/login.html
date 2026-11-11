@@ -14,8 +14,10 @@
         <h1>UniSync</h1>
         <h2>Entrar</h2>
 
-        {% if login_valido %}
-            <p>Dados preenchidos corretamente.</p>
+        {% if messages %}
+            {% for message in messages %}
+                <p>{{ message }}</p>
+            {% endfor %}
         {% endif %}
 
         <form method="post" novalidate>
@@ -47,6 +49,11 @@
                 Entrar
             </button>
         </form>
+
+        <p>
+            Ainda não possui cadastro?
+            <a href="{% url 'register' %}">Cadastre-se</a>
+        </p>
     </main>
 
     <script src="{% static 'authentication/js/login.js' %}"></script>
