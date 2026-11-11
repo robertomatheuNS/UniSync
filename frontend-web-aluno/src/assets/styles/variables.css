@@ -31,6 +31,12 @@
   --color-error: #c62828;
   --radius-lg: 24px;
 );
+
+--header-height: 4.5rem;
+--sidebar-width: 11rem;
+--aside-width: 17rem;
+--color-highlight: #4fa3c4;
+
 }
 
 /* Modo escuro: só redefinimos as variáveis. Será usado depois. */
