@@ -14,10 +14,8 @@
         <h1>UniSync</h1>
         <h2>Entrar</h2>
 
-        {% if messages %}
-            {% for message in messages %}
-                <p>{{ message }}</p>
-            {% endfor %}
+        {% if login_valido %}
+            <p>Dados preenchidos corretamente.</p>
         {% endif %}
 
         <form method="post" novalidate>

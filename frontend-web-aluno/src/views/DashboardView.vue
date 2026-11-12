@@ -1,3 +1,8 @@
+<script setup>
+import NoticeList from '@/components/dashboard/NoticeList.vue'
+import { NOTICES } from '@/data/notices'
+</script>
+
 <template>
-  <h1>Dashboard</h1>
+  <NoticeList :notices="NOTICES" />
 </template>
