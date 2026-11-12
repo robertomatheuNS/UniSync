@@ -32,6 +32,10 @@
   --radius-lg: 24px;
   
   --color-task: #a8c5d1;
+
+  --color-white: #ffffff;
+  --icon-filter: none;
+  --color-scheme: light;
 );
 
 --header-height: 4.5rem;
@@ -43,9 +47,24 @@
 
 /* Modo escuro: só redefinimos as variáveis. */
 [data-theme='dark'] {
-  --color-background: #14161a;
+  --color-header: #1f4e63;
   --color-sidebar: #1d2026;
   --color-card: #2a2f38;
+  --color-background: #14161a;
+  --color-field: #3a404b;
+  --color-task: #3d5560;
   --color-text: #f1f1f1;
+  --color-text-muted: #a0a7b4;
+  --color-primary: #f1f1f1;
+  --color-on-primary: #14161a;
+  --color-error: #ef5350;
+  --gradient-landing: linear-gradient(
+    to bottom,
+    #14161a 0%,
+    #1b2430 60%,
+    var(--color-accent) 100%
+  );
+  --icon-filter: invert(1);
+  color-scheme: dark;
 }
 
