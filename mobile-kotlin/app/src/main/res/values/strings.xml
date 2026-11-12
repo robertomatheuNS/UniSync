@@ -8,4 +8,26 @@
     <string name="home_students_description">Estudantes sorrindo vistos de baixo</string>
     <string name="home_auth_pending">Esta tela está em desenvolvimento.</string>
     <string name="home_close">Fechar</string>
+    <string name="auth_back">Voltar</string>
+    <string name="auth_create">Criar cadastro</string>
+    <string name="auth_enter">Entrar</string>
+    <string name="auth_student">Aluno</string>
+    <string name="auth_teacher">Professor</string>
+    <string name="auth_name">Nome completo</string>
+    <string name="auth_email">E-mail</string>
+    <string name="auth_password">Senha</string>
+    <string name="auth_code">Código do professor</string>
+    <string name="auth_required">Preencha este campo.</string>
+    <string name="auth_name_error">Use entre 2 e 100 caracteres.</string>
+    <string name="auth_email_error">Informe um e-mail válido com até 180 caracteres.</string>
+    <string name="auth_password_error">Use entre 8 e 128 caracteres.</string>
+    <string name="auth_show">Mostrar</string>
+    <string name="auth_hide">Ocultar</string>
+    <string name="auth_have_account">Já possui cadastro? Entrar</string>
+    <string name="auth_new_account">Ainda não possui cadastro? Cadastre-se</string>
+    <string name="auth_connection_error">Não foi possível conectar ao serviço. Confira a conexão e tente novamente.</string>
+    <string name="auth_registered">Cadastro realizado</string>
+    <string name="auth_logged_in">Login realizado</string>
+    <string name="auth_login_next">Entre com seu e-mail e senha para continuar.</string>
+    <string name="auth_dashboard_pending">Autenticação confirmada. A área interna do aplicativo será implementada na próxima etapa.</string>
 </resources>
