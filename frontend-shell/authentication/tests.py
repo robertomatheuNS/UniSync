@@ -36,7 +36,7 @@ class AuthenticationTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("dashboard"))
+        self.assertRedirects(response, reverse("app"))
         self.assertIn("auth_token", self.client.session)
 
     def test_dashboard_requires_authentication(self):
@@ -44,15 +44,15 @@ class AuthenticationTests(TestCase):
 
         self.assertRedirects(response, reverse("login"))
 
-    def test_authenticated_user_can_access_dashboard(self):
+    def test_authenticated_user_can_access_app(self):
         session = self.client.session
         session["auth_token"] = "token-de-desenvolvimento"
         session.save()
 
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("app"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Você está autenticado.")
+        self.assertContains(response, 'id="app"')
 
     def test_logout_clears_session(self):
         session = self.client.session
