@@ -138,3 +138,114 @@ def test_buscar_tarefa_inexistente(cliente_aluno):
         )
 
     assert resposta.status_code == 404
+
+
+def test_aluno_atualiza_status_tarefa(cliente_aluno):
+    client, aluno = cliente_aluno
+    tarefa_id = PydanticObjectId()
+
+    tarefa = tarefa_falsa(aluno.id)
+    tarefa["id"] = str(tarefa_id)
+    tarefa["status"] = "EM_ANDAMENTO"
+
+    with patch.object(
+        tarefa_service,
+        "atualizar_tarefa",
+        new_callable=AsyncMock,
+        return_value=tarefa,
+    ) as mock_atualizar:
+        resposta = client.patch(
+            f"/tarefas/atualizar/{tarefa_id}",
+            json={"status": "EM_ANDAMENTO"},
+        )
+
+    assert resposta.status_code == 200
+    assert resposta.json()["status"] == "EM_ANDAMENTO"
+
+    mock_atualizar.assert_awaited_once()
+    args = mock_atualizar.await_args.args
+
+    assert args[0] == tarefa_id
+    assert args[1].status.value == "EM_ANDAMENTO"
+    assert args[2] == aluno.id
+
+
+def test_atualizar_tarefa_sem_campos(cliente_aluno):
+    client, _ = cliente_aluno
+    tarefa_id = PydanticObjectId()
+
+    with patch.object(
+        tarefa_service,
+        "atualizar_tarefa",
+        new_callable=AsyncMock,
+        side_effect=ValueError("Nenhum campo foi informado"),
+    ):
+        resposta = client.patch(
+            f"/tarefas/atualizar/{tarefa_id}",
+            json={},
+        )
+
+    assert resposta.status_code == 400
+    assert resposta.json()["detail"] == "Nenhum campo foi informado"
+
+
+
+def test_aluno_exclui_tarefa(cliente_aluno):
+    client, aluno = cliente_aluno
+    tarefa_id = PydanticObjectId()
+
+    with patch.object(
+        tarefa_service,
+        "excluir_tarefa",
+        new_callable=AsyncMock,
+        return_value=True,
+    ) as mock_excluir:
+        resposta = client.delete(
+            f"/tarefas/excluir/{tarefa_id}"
+        )
+
+    assert resposta.status_code == 204
+    mock_excluir.assert_awaited_once_with(
+        tarefa_id,
+        aluno.id,
+    )
+
+
+def test_excluir_tarefa_inexistente(cliente_aluno):
+    client, _ = cliente_aluno
+    tarefa_id = PydanticObjectId()
+
+    with patch.object(
+        tarefa_service,
+        "excluir_tarefa",
+        new_callable=AsyncMock,
+        return_value=False,
+    ):
+        resposta = client.delete(
+            f"/tarefas/excluir/{tarefa_id}"
+        )
+
+    assert resposta.status_code == 404
+
+
+def test_aluno_nao_exclui_tarefa_de_outro(cliente_aluno):
+    client, aluno = cliente_aluno
+    tarefa_id = PydanticObjectId()
+
+    with patch.object(
+        tarefa_service,
+        "excluir_tarefa",
+        new_callable=AsyncMock,
+        side_effect=PermissionError(
+            "Você não tem permissão para acessar esta tarefa"
+        ),
+    ) as mock_excluir:
+        resposta = client.delete(
+            f"/tarefas/excluir/{tarefa_id}"
+        )
+
+    assert resposta.status_code == 403
+    mock_excluir.assert_awaited_once_with(
+        tarefa_id,
+        aluno.id,
+    )
