@@ -1,0 +1,13 @@
+
+services:
+  frontend:
+    build: .
+    container_name: unisync-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      VITE_PYTHON_API_URL: http://localhost:8000
+    command: npm run dev -- --host 0.0.0.0
