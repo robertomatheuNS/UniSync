@@ -69,11 +69,24 @@ def register_view(request):
     )
 
 
+def app_view(request):
+    if not request.session.get("auth_token"):
+        return redirect("login")
+
+    return render(
+        request,
+        "authentication/app.html",
+    )
+
+
 def dashboard_view(request):
     if not request.session.get("auth_token"):
         return redirect("login")
 
-    return render(request, "authentication/dashboard.html")
+    return render(
+        request,
+        "authentication/dashboard.html",
+    )
 
 
 def logout_view(request):

@@ -6,17 +6,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UniSync</title>
+
     <link rel="stylesheet" href="{% static 'authentication/css/login.css' %}">
 </head>
-<body>
-    <main>
-        <h1>UniSync</h1>
-        <h2>Bem-vindo</h2>
+<body class="home-page">
+    <main class="home-page__content">
+        <section class="hero-section">
+            <header class="hero-section__header">
+                <h1>Veja na prática</h1>
 
-        <p>Acesse sua conta ou crie um cadastro.</p>
+                <nav class="hero-section__navigation">
+                    <a href="{% url 'login' %}">Login</a>
+                    <a href="{% url 'register' %}">Cadastre-se</a>
+                </nav>
+            </header>
 
-        <p><a href="{% url 'login' %}">Entrar</a></p>
-        <p><a href="{% url 'register' %}">Cadastre-se</a></p>
+            <div class="hero-section__footer">
+                <h2>UNISYNC</h2>
+
+                <div class="hero-section__images">
+                    <img
+                        src="{% static 'authentication/images/group-study.jpg' %}"
+                        alt="Estudantes reunidos"
+                    >
+
+                    <img
+                        src="{% static 'authentication/images/students-looking-down.jpg' %}"
+                        alt="Estudantes utilizando tecnologia"
+                    >
+                </div>
+            </div>
+        </section>
     </main>
 </body>
 </html>

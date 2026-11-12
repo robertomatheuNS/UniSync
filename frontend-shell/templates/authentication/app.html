@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniSync</title>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script>
+        window.UNISYNC_SHELL = {
+            isAuthenticated: true,
+            logoutUrl: "{% url 'logout' %}"
+        };
+    </script>
+
+    <script
+        type="module"
+        src="http://localhost:5173/src/main.js">
+    </script>
+</body>
+</html>
