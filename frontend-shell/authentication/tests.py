@@ -13,7 +13,6 @@ class AuthenticationTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-    @override_settings(AUTH_MOCK=True)
     def test_login_with_invalid_credentials(self):
         response = self.client.post(
             reverse("login"),
@@ -26,7 +25,6 @@ class AuthenticationTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "E-mail ou senha inválidos.")
 
-    @override_settings(AUTH_MOCK=True)
     def test_login_with_valid_credentials(self):
         response = self.client.post(
             reverse("login"),
@@ -66,7 +64,7 @@ class AuthenticationTests(TestCase):
 
     @override_settings(
         AUTH_MOCK=False,
-        API_BASE_URL="http://localhost:5040",
+        API_BASE_URL="https://localhost:7129",
     )
     @patch("authentication.services.auth_service.requests.post")
     def test_api_login_success(self, mock_post):
@@ -87,7 +85,7 @@ class AuthenticationTests(TestCase):
 
     @override_settings(
         AUTH_MOCK=False,
-        API_BASE_URL="http://localhost:5040",
+        API_BASE_URL="https://localhost:7129",
     )
     @patch("authentication.services.auth_service.requests.post")
     def test_api_login_invalid_credentials(self, mock_post):
@@ -108,7 +106,7 @@ class AuthenticationTests(TestCase):
 
     @override_settings(
         AUTH_MOCK=False,
-        API_BASE_URL="http://localhost:5040",
+        API_BASE_URL="https://localhost:7129",
     )
     @patch("authentication.services.auth_service.requests.post")
     def test_api_login_connection_error(self, mock_post):
@@ -125,7 +123,6 @@ class AuthenticationTests(TestCase):
             "Não foi possível conectar ao serviço de autenticação.",
         )
 
-    @override_settings(AUTH_MOCK=True)
     def test_register_mock_success(self):
         resultado = AuthenticationService().register(
             nome="Usuário de Teste",
@@ -137,7 +134,6 @@ class AuthenticationTests(TestCase):
         self.assertEqual(resultado.user["nome"], "Usuário de Teste")
         self.assertEqual(resultado.user["email"], "novo@unisync.com")
 
-    @override_settings(AUTH_MOCK=True)
     def test_register_mock_existing_email(self):
         resultado = AuthenticationService().register(
             nome="Usuário Existente",
@@ -153,7 +149,7 @@ class AuthenticationTests(TestCase):
 
     @override_settings(
         AUTH_MOCK=False,
-        API_BASE_URL="http://localhost:5040",
+        API_BASE_URL="https://localhost:7129",
     )
     @patch("authentication.services.auth_service.requests.post")
     def test_api_register_success(self, mock_post):
