@@ -1,6 +1,6 @@
 {
     "name": "UniSync Python Backend",
-    "dockerComposeFile": "../docker-compose.yml",
+    "dockerComposeFile": ["../docker-compose.yml", "docker-compose.dev.yml"],
     "service": "api",
     "workspaceFolder": "/app",
     "shutdownAction": "stopCompose",

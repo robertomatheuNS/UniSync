@@ -6,6 +6,9 @@ from .forms import LoginForm, RegisterForm
 from .services.auth_service import AuthenticationService
 
 
+def home_view(request):
+    return render(request, "authentication/home.html")
+
 def login_view(request):
     if request.session.get("auth_token"):
         return redirect("app")
