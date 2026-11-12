@@ -15,10 +15,13 @@ defineProps({
       <span class="notice-card__deadline">{{ formatDaysLeft(notice.daysLeft) }}</span>
     </header>
 
-    <div>
-      <p class="notice-card__title" :title="notice.title">{{ notice.title }}</p>
-      <p class="notice-card__teacher">{{ notice.teacher }}</p>
-    </div>
+    <footer class="notice-card__footer">
+      <div class="notice-card__info">
+        <p class="notice-card__title" :title="notice.title">{{ notice.title }}</p>
+        <p class="notice-card__teacher">{{ notice.teacher }}</p>
+      </div>
+      <slot name="actions" />
+    </footer>
   </article>
 </template>
 
@@ -53,6 +56,17 @@ defineProps({
   margin-left: auto;
   font-size: 0.8rem;
   font-weight: 700;
+}
+
+.notice-card__footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.notice-card__info {
+  min-width: 0;
 }
 
 .notice-card__title {

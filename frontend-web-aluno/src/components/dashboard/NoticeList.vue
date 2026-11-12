@@ -3,14 +3,19 @@ import NoticeCard from '@/components/dashboard/NoticeCard.vue'
 
 defineProps({
   notices: { type: Array, required: true },
+  label: { type: String, default: 'Próximos avisos' },
 })
 </script>
 
 <template>
-  <section class="notice-list" aria-label="Próximos avisos">
+  <section class="notice-list" :aria-label="label">
     <ul class="notice-list__grid">
       <li v-for="notice in notices" :key="notice.id">
-        <NoticeCard :notice="notice" />
+        <NoticeCard :notice="notice">
+          <template #actions>
+            <slot name="actions" :notice="notice" />
+          </template>
+        </NoticeCard>
       </li>
     </ul>
   </section>
