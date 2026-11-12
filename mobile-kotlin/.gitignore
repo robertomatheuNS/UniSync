@@ -1,0 +1,18 @@
+# Configuração local do Android Studio e do SDK
+.idea/
+*.iml
+local.properties
+
+# Caches e saídas de compilação do projeto e dos módulos
+.gradle/
+.kotlin/
+build/
+.externalNativeBuild/
+.cxx/
+/captures/
+
+# Arquivos locais de assinatura e do sistema
+*.jks
+*.keystore
+keystore.properties
+.DS_Store
