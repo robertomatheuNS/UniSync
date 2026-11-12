@@ -33,9 +33,9 @@ class LoginForm(forms.Form):
 class RegisterForm(forms.Form):
     nome = forms.CharField(
         label="Nome completo",
-        required=True,
         min_length=2,
         max_length=100,
+        required=True,
         widget=forms.TextInput(
             attrs={
                 "id": "nome",
@@ -47,8 +47,8 @@ class RegisterForm(forms.Form):
 
     email = forms.EmailField(
         label="E-mail",
-        required=True,
         max_length=180,
+        required=True,
         widget=forms.EmailInput(
             attrs={
                 "id": "email",
@@ -60,9 +60,9 @@ class RegisterForm(forms.Form):
 
     senha = forms.CharField(
         label="Senha",
-        required=True,
         min_length=8,
         max_length=128,
+        required=True,
         widget=forms.PasswordInput(
             attrs={
                 "id": "senha",
@@ -72,41 +72,8 @@ class RegisterForm(forms.Form):
         ),
     )
 
-    codigo_professor = forms.CharField(
-        label="Código do professor",
-        required=False,
-        widget=forms.TextInput(
-            attrs={
-                "id": "codigo_professor",
-                "name": "codigo_professor",
-            }
-        ),
-    )
-
-    def __init__(self, *args, tipo_usuario="aluno", **kwargs):
-        super().__init__(*args, **kwargs)
-        self.tipo_usuario = tipo_usuario
-
     def clean_nome(self):
         return " ".join(self.cleaned_data["nome"].split())
 
     def clean_email(self):
         return self.cleaned_data["email"].strip().lower()
-
-    def clean(self):
-        cleaned_data = super().clean()
-
-        codigo_professor = cleaned_data.get(
-            "codigo_professor",
-            "",
-        ).strip()
-
-        if self.tipo_usuario == "professor" and not codigo_professor:
-            self.add_error(
-                "codigo_professor",
-                "O código do professor é obrigatório.",
-            )
-
-        cleaned_data["codigo_professor"] = codigo_professor
-
-        return cleaned_data
