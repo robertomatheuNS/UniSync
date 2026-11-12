@@ -1,8 +1,13 @@
 from django.contrib import messages
 from django.shortcuts import redirect, render
+from django.utils.crypto import salted_hmac
 
 from .forms import LoginForm, RegisterForm
 from .services.auth_service import AuthenticationService
+
+
+def home_view(request):
+    return render(request, "authentication/home.html")
 
 
 def login_view(request):
@@ -21,6 +26,9 @@ def login_view(request):
 
         if resultado.success and resultado.token:
             request.session["auth_token"] = resultado.token
+            request.session["notice_owner"] = salted_hmac(
+                "professor-notices", form.cleaned_data["email"]
+            ).hexdigest()
             return redirect("dashboard")
 
         form.add_error(
@@ -79,3 +87,13 @@ def dashboard_view(request):
 def logout_view(request):
     request.session.flush()
     return redirect("login")
+
+
+def professor_view(request):
+    if not request.session.get("auth_token"):
+        return redirect("login")
+
+    owner = request.session.get("notice_owner")
+    if not owner:
+        owner = salted_hmac("professor-notices", request.session.session_key or "").hexdigest()
+    return render(request, "authentication/professor.html", {"notice_owner": owner})

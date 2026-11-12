@@ -1,0 +1,126 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Professor · UniSync</title>
+        <link rel="stylesheet" href="{% static 'authentication/css/professor.css' %}">
+        <script src="{% static 'authentication/js/professor.js' %}" defer></script>
+    </head>
+    <body data-owner="{{ notice_owner }}">
+        <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+        <header class="topbar">
+            <a class="brand" href="{% url 'dashboard' %}"><span class="brand-mark" aria-hidden="true">U</span>UniSync</a>
+            <div class="account"><span>Área do professor</span><span class="avatar" aria-hidden="true">P</span><a href="{% url 'logout' %}">Sair</a>
+            </div>
+        </header>
+        <div class="workspace">
+            <aside class="sidebar">
+                <nav aria-label="Menu principal">
+                    <a href="{% url 'dashboard' %}"><span aria-hidden="true">▦</span> Dashboard</a>
+                    <a href="{% url 'professor' %}" aria-current="page"><span aria-hidden="true">♙</span> Professor</a>
+                    <span class="unavailable" title="Em desenvolvimento"><span aria-hidden="true">▤</span> Disciplinas <small>Em breve</small></span>
+                    <span class="unavailable" title="Em desenvolvimento"><span aria-hidden="true">♧</span> Mural colaborativo <small>Em breve</small></span>
+                    <span class="unavailable" title="Em desenvolvimento"><span aria-hidden="true">▥</span> Kanban <small>Em breve</small></span>
+                </nav>
+            </aside>
+            <main id="conteudo">
+                <section class="focus-banner" aria-label="Semana de foco">
+                    <div>
+                        <p>Semana</p>
+                        <h2>De Foco</h2><span>Um espaço para organizar o que vem pela frente.</span>
+                    </div>
+                    <div class="notebook" aria-hidden="true">
+                    </div>
+                </section>
+                <section class="notice-panel" aria-labelledby="page-title">
+                    <div class="panel-heading">
+                        <h1 id="page-title">Cadastrar avisos</h1>
+                        <button type="button" id="new-notice" class="primary">+ Novo aviso</button>
+                    </div>
+                    <p class="storage-note">Os avisos são salvos neste navegador para esta conta. A publicação para alunos depende da integração com a API.</p>
+                    <p id="feedback" role="status" aria-live="polite">
+                    </p>
+                    <div class="list-heading">
+                        <h2>Avisos cadastrados <span id="notice-count">0</span>
+                        </h2>
+                    </div>
+                    <form id="filters" class="filters" role="search">
+                        <div>
+                            <label for="search">Buscar aviso</label>
+                            <input id="search" type="search" placeholder="Título ou disciplina">
+                        </div>
+                        <div>
+                            <label for="type-filter">Tipo</label>
+                            <select id="type-filter"><option value="">Todos os tipos</option><option>Atividade</option><option>Prova</option><option>Trabalho</option><option>Palestra</option><option>Evento</option><option>Aviso</option>
+                            </select>
+                        </div>
+                    </form>
+                    <div id="notice-list" class="notice-grid">
+                    </div>
+                    <p id="empty-state" class="empty-state">Nenhum aviso cadastrado. Use “Novo aviso” para começar.</p>
+                </section>
+            </main>
+            <aside class="right-sidebar" aria-label="Organização pessoal">
+                <section class="calendar">
+                    <div class="calendar-heading">
+                        <button id="previous-month" type="button" aria-label="Mês anterior">‹</button>
+                        <h2 id="calendar-title">
+                        </h2>
+                        <button id="next-month" type="button" aria-label="Próximo mês">›</button>
+                    </div>
+                    <table><caption class="sr-only">Calendário mensal</caption>
+                        <thead>
+                            <tr><th scope="col">Dom</th><th scope="col">Seg</th><th scope="col">Ter</th><th scope="col">Qua</th><th scope="col">Qui</th><th scope="col">Sex</th><th scope="col">Sáb</th>
+                            </tr>
+                        </thead>
+                        <tbody id="calendar-days">
+                        </tbody>
+                    </table>
+                </section>
+                <section class="reminders">
+                    <h2>Lembretes</h2>
+                    <ul id="reminder-list">
+                    </ul>
+                    <p id="reminder-empty">Seus próximos avisos aparecerão aqui.</p>
+                </section>
+            </aside>
+        </div>
+        <dialog id="notice-dialog" aria-labelledby="dialog-title">
+            <form id="notice-form">
+                <div class="dialog-heading">
+                    <h2 id="dialog-title">Novo aviso</h2>
+                    <button type="button" id="close-dialog" class="icon-button" aria-label="Fechar formulário">×</button>
+                </div>
+                <label for="title">Título</label>
+                <input id="title" name="title" required maxlength="100" placeholder="Ex.: Avaliação do segundo bimestre">
+                <div class="form-row">
+                    <div>
+                        <label for="type">Tipo</label>
+                        <select id="type" name="type" required><option>Atividade</option><option>Prova</option><option>Trabalho</option><option>Palestra</option><option>Evento</option><option>Aviso</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="date">Data</label>
+                        <input id="date" name="date" type="date" max="9999-12-31" required>
+                    </div>
+                </div>
+                <label for="subject">Disciplina</label>
+                <input id="subject" name="subject" required maxlength="100" placeholder="Ex.: Front-end Frameworks">
+                <label for="teacher">Professor</label>
+                <input id="teacher" name="teacher" required maxlength="100" autocomplete="name">
+                <label for="description">Descrição <span class="optional">(opcional)</span>
+                </label>
+                <textarea id="description" name="description" rows="4" maxlength="2000" placeholder="Orientações para a turma">
+                </textarea>
+                <p id="form-error" role="alert">
+                </p>
+                <div class="form-actions">
+                    <button type="button" id="cancel-dialog" class="secondary">Cancelar</button>
+                    <button type="submit" class="primary">Salvar aviso</button>
+                </div>
+            </form>
+        </dialog>
+    </body>
+</html>
