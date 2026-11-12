@@ -1,13 +1,14 @@
 from contextlib import asynccontextmanager
-from src.routers import oportunidades
+
 from fastapi import FastAPI
-from src.routers import tarefas
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.database.connection import (
     conectar_mongodb,
     desconectar_mongodb,
 )
+from src.routers import oportunidades, tarefas
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,6 +17,7 @@ async def lifespan(app: FastAPI):
     yield
 
     await desconectar_mongodb()
+
 
 app = FastAPI(
     title="UniSync - Motor de Oportunidades",
@@ -30,14 +32,18 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
     ],
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
+
 app.include_router(oportunidades.router)
 app.include_router(tarefas.router)
+
 
 @app.get("/health", tags=["Health"])
 async def health_check():
