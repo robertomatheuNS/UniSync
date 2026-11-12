@@ -2,6 +2,7 @@
 import logo from '@/assets/images/logo.gif'
 import avatar from '@/assets/images/avatar.jpg'
 import bellIcon from '@/assets/icons/bell.svg'
+import ThemeToggle from '@/components/layout/ThemeToggle.vue'
 
 // TODO: substituir por dados reais quando o back-end existir
 const NOTIFICATION_COUNT = 1
@@ -12,6 +13,7 @@ const NOTIFICATION_COUNT = 1
     <img :src="logo" alt="UniSync" class="app-header__logo" />
 
     <div class="app-header__actions">
+      <ThemeToggle />
       <button type="button" class="app-header__bell" aria-label="Notificações">
         <img :src="bellIcon" alt="" class="app-header__bell-icon" />
         <span v-if="NOTIFICATION_COUNT > 0" class="app-header__badge">
