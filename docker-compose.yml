@@ -1,0 +1,93 @@
+name: unisync-stack
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: unisync_dev
+      POSTGRES_USER: unisync
+      POSTGRES_PASSWORD: unisync_dev
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "unisync", "-d", "unisync_dev"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  mongodb:
+    image: mongo:8.0
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  api-dotnet:
+    build: ./backend-dotnet/Unisync.Api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Neon: ""
+      ConnectionStrings__DefaultConnection: Host=postgres;Database=unisync_dev;Username=unisync;Password=unisync_dev
+      Jwt__Key: ${UNISYNC_JWT_KEY:?Defina UNISYNC_JWT_KEY com uma chave local em Base64}
+      Jwt__Issuer: UniSync
+      Jwt__Audience: UniSync.Clients
+      Cors__AllowedOrigins__0: http://localhost:5173
+      Cors__AllowedOrigins__1: http://127.0.0.1:5173
+    ports:
+      - "127.0.0.1:5041:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/8080"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api-python:
+    build: ./backend-python
+    environment:
+      MONGODB_URL: mongodb://mongodb:27017
+      MONGODB_DATABASE: unisync_dev
+      JWT_KEY: ${UNISYNC_JWT_KEY:?Defina UNISYNC_JWT_KEY com uma chave local em Base64}
+      JWT_ISSUER: UniSync
+      JWT_AUDIENCE: UniSync.Clients
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health', timeout=2).close()"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  frontend-shell:
+    build: ./frontend-shell
+    environment:
+      API_BASE_URL: http://api-dotnet:8080
+      AUTH_MOCK: "false"
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      api-dotnet:
+        condition: service_healthy
+
+  frontend-web:
+    build: ./frontend-web-aluno
+    environment:
+      VITE_PYTHON_API_URL: http://localhost:8000
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      api-python:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  mongo-data:
