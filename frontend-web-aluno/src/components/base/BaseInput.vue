@@ -6,7 +6,7 @@ defineProps({
   error: { type: String, default: '' },
 })
 
-const model = defineModel({ type: String, default: '' })
+const model = defineModel({ type: [String, Number], default: '' })
 </script>
 
 <template>
