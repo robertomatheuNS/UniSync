@@ -9,7 +9,15 @@ from src.models.tarefa import Tarefa, StatusTarefa
 from src.schemas.tarefa import TarefaCreate, TarefaUpdate
 from src.services import tarefa_service
 
-
+@pytest.fixture(autouse=True)
+def simular_colecao_beanie():
+    with patch.object(
+        Tarefa,
+        "get_pymongo_collection",
+        return_value=None,
+    ):
+        yield
+        
 @pytest.mark.asyncio
 async def test_criar_tarefa():
     aluno_id = uuid4()
