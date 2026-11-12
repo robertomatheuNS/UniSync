@@ -36,6 +36,8 @@
   --color-white: #ffffff;
   --icon-filter: none;
   --color-scheme: light;
+
+  --color-calendar: #e4e2e0;
 );
 
 --header-height: 4.5rem;
@@ -66,5 +68,7 @@
   );
   --icon-filter: invert(1);
   --color-scheme: dark;
+
+  --color-calendar: #2a2f38;
 }
 
