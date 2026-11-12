@@ -30,6 +30,8 @@
   --color-field: #ffffff;
   --color-error: #c62828;
   --radius-lg: 24px;
+  
+  --color-task: #a8c5d1;
 );
 
 --header-height: 4.5rem;
@@ -39,7 +41,7 @@
 
 }
 
-/* Modo escuro: só redefinimos as variáveis. Será usado depois. */
+/* Modo escuro: só redefinimos as variáveis. */
 [data-theme='dark'] {
   --color-background: #14161a;
   --color-sidebar: #1d2026;
