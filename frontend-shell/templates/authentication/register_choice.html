@@ -6,24 +6,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Escolha do perfil — UniSync</title>
+
     <link rel="stylesheet" href="{% static 'authentication/css/login.css' %}">
 </head>
-<body>
-    <main>
+<body class="choice-page">
+    <main class="profile-choice-card">
         <h1>UniSync</h1>
-        <h2>Escolha seu perfil</h2>
 
-        <p>
-            <a href="{% url 'register_form' tipo_usuario='aluno' %}">
-                Sou aluno
-            </a>
-        </p>
+        <h2>Eu sou</h2>
 
-        <p>
+        <div class="profile-choice-card__actions">
             <a href="{% url 'register_form' tipo_usuario='professor' %}">
-                Sou professor
+                Professor
             </a>
-        </p>
+
+            <a href="{% url 'register_form' tipo_usuario='aluno' %}">
+                Aluno
+            </a>
+        </div>
 
         <p>
             Já possui cadastro?

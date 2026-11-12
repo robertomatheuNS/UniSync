@@ -9,14 +9,14 @@
 
     <link rel="stylesheet" href="{% static 'authentication/css/login.css' %}">
 </head>
-<body>
-    <main>
+<body class="auth-page">
+    <main class="auth-card">
         <h1>UniSync</h1>
         <h2>Entrar</h2>
 
         {% if messages %}
             {% for message in messages %}
-                <p>{{ message }}</p>
+                <p class="message-success">{{ message }}</p>
             {% endfor %}
         {% endif %}
 
@@ -32,7 +32,7 @@
             {{ form.email }}
 
             {% for erro in form.email.errors %}
-                <p>{{ erro }}</p>
+                <p class="field-error">{{ erro }}</p>
             {% endfor %}
 
             <label for="{{ form.senha.id_for_label }}">
