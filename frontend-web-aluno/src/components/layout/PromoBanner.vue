@@ -20,11 +20,12 @@ import bannerImage from '@/assets/images/focus-banner.jpg'
 
 <style scoped>
 .promo-banner {
-  min-height: 8rem;
+  min-height: 9rem;
   padding: var(--space-md) var(--space-lg);
   display: flex;
   flex-direction: column;
   justify-content: center;
+  gap: var(--space-sm);
   border-radius: var(--radius-lg);
   background-size: cover;
   background-position: center;
@@ -32,11 +33,27 @@ import bannerImage from '@/assets/images/focus-banner.jpg'
 }
 
 .promo-banner__title {
-  font-size: 2.5rem;
+  font-size: 3rem;
+  line-height: 0.95;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .promo-banner__accent {
-  color: var(--color-accent);
+  display: block;
+  width: fit-content;
+  background: linear-gradient(90deg, var(--color-accent), #4fd1c5);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+}
+
+.promo-banner__subtitle {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .promo-banner__cta {
@@ -46,8 +63,7 @@ import bannerImage from '@/assets/images/focus-banner.jpg'
   border-radius: var(--radius-pill);
   background: var(--color-highlight);
   color: var(--color-white);
+  font-family: var(--font-main);
   font-weight: 700;
-
 }
-
 </style>
