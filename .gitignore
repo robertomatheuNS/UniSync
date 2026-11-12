@@ -1,0 +1,21 @@
+# Segredos locais
+.env
+.env.*
+!.env.example
+
+# Python
+**/.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Django
+**/db.sqlite3
+**/staticfiles/
+
+# Node/Vue
+**/node_modules/
+**/dist/
+
+# Sistema
+.DS_Store
