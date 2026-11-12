@@ -61,7 +61,7 @@ const NOTIFICATION_COUNT = 1
   padding: 0 0.25rem;
   border-radius: var(--radius-pill);
   background: var(--color-error);
-  color: var(--color-on-primary);
+  color: var(--color-white);
   font-size: 0.7rem;
   text-align: center;
 }

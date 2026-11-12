@@ -28,7 +28,7 @@ import bannerImage from '@/assets/images/focus-banner.jpg'
   border-radius: var(--radius-lg);
   background-size: cover;
   background-position: center;
-  color: var(--color-on-primary);
+  color: var(--color-white);
 }
 
 .promo-banner__title {
@@ -45,7 +45,9 @@ import bannerImage from '@/assets/images/focus-banner.jpg'
   border: none;
   border-radius: var(--radius-pill);
   background: var(--color-highlight);
-  color: var(--color-on-primary);
+  color: var(--color-white);
   font-weight: 700;
+
 }
+
 </style>
