@@ -1,3 +1,5 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -8,11 +10,12 @@
 <body>
     <div id="app"></div>
 
+    {{ shell_config|json_script:"unisync-shell-config" }}
+
     <script>
-        window.UNISYNC_SHELL = {
-            isAuthenticated: true,
-            logoutUrl: "{% url 'logout' %}"
-        };
+        window.UNISYNC_SHELL = JSON.parse(
+            document.getElementById("unisync-shell-config").textContent
+        );
     </script>
 
     <script
