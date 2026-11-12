@@ -1,8 +1,10 @@
 <script setup>
 import NoticeList from '@/components/dashboard/NoticeList.vue'
-import { NOTICES } from '@/data/notices'
+import { useNotices } from '@/composables/useNotices'
+
+const { notices } = useNotices()
 </script>
 
 <template>
-  <NoticeList :notices="NOTICES" />
+  <NoticeList :notices="notices" />
 </template>
