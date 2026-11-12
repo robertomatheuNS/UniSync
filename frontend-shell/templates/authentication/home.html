@@ -1,0 +1,22 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UniSync</title>
+    <link rel="stylesheet" href="{% static 'authentication/css/login.css' %}">
+</head>
+<body>
+    <main>
+        <h1>UniSync</h1>
+        <h2>Bem-vindo</h2>
+
+        <p>Acesse sua conta ou crie um cadastro.</p>
+
+        <p><a href="{% url 'login' %}">Entrar</a></p>
+        <p><a href="{% url 'register' %}">Cadastre-se</a></p>
+    </main>
+</body>
+</html>
