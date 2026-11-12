@@ -30,13 +30,31 @@ class AuthenticationService:
         nome: str,
         email: str,
         senha: str,
+        tipo_usuario: str = "aluno",
+        codigo_professor: str | None = None,
     ) -> RegistrationResult:
         if settings.AUTH_MOCK:
-            return self._register_mock(nome, email, senha)
+            return self._register_mock(
+                nome,
+                email,
+                senha,
+                tipo_usuario,
+                codigo_professor,
+            )
 
-        return self._register_api(nome, email, senha)
+        return self._register_api(
+            nome,
+            email,
+            senha,
+            tipo_usuario,
+            codigo_professor,
+        )
 
-    def _login_mock(self, email: str, senha: str) -> AuthenticationResult:
+    def _login_mock(
+        self,
+        email: str,
+        senha: str,
+    ) -> AuthenticationResult:
         if email == "teste@unisync.com" and senha == "123456":
             return AuthenticationResult(
                 success=True,
@@ -48,7 +66,11 @@ class AuthenticationService:
             message="E-mail ou senha inválidos.",
         )
 
-    def _login_api(self, email: str, senha: str) -> AuthenticationResult:
+    def _login_api(
+        self,
+        email: str,
+        senha: str,
+    ) -> AuthenticationResult:
         try:
             response = requests.post(
                 f"{settings.API_BASE_URL}/api/usuarios/login",
@@ -88,11 +110,19 @@ class AuthenticationService:
         nome: str,
         email: str,
         senha: str,
+        tipo_usuario: str = "aluno",
+        codigo_professor: str | None = None,
     ) -> RegistrationResult:
         if email == "cadastrado@unisync.com":
             return RegistrationResult(
                 success=False,
                 message="O e-mail informado já está cadastrado.",
+            )
+
+        if tipo_usuario == "professor" and not codigo_professor:
+            return RegistrationResult(
+                success=False,
+                message="O código do professor é obrigatório.",
             )
 
         return RegistrationResult(
@@ -101,6 +131,7 @@ class AuthenticationService:
                 "id": "usuario-de-desenvolvimento",
                 "nome": nome,
                 "email": email,
+                "tipo": tipo_usuario,
             },
         )
 
@@ -109,15 +140,29 @@ class AuthenticationService:
         nome: str,
         email: str,
         senha: str,
+        tipo_usuario: str = "aluno",
+        codigo_professor: str | None = None,
     ) -> RegistrationResult:
+        if tipo_usuario == "professor":
+            endpoint = "/api/usuarios/professores"
+            payload = {
+                "nome": nome,
+                "email": email,
+                "senha": senha,
+                "codigoProfessor": codigo_professor,
+            }
+        else:
+            endpoint = "/api/usuarios"
+            payload = {
+                "nome": nome,
+                "email": email,
+                "senha": senha,
+            }
+
         try:
             response = requests.post(
-                f"{settings.API_BASE_URL}/api/usuarios",
-                json={
-                    "nome": nome,
-                    "email": email,
-                    "senha": senha,
-                },
+                f"{settings.API_BASE_URL}{endpoint}",
+                json=payload,
                 timeout=5,
             )
         except requests.RequestException:
@@ -140,6 +185,17 @@ class AuthenticationService:
                 message=dados.get(
                     "mensagem",
                     "O e-mail informado já está cadastrado.",
+                ),
+            )
+
+        if response.status_code == 400:
+            dados = response.json()
+
+            return RegistrationResult(
+                success=False,
+                message=dados.get(
+                    "mensagem",
+                    "Os dados informados são inválidos.",
                 ),
             )
 

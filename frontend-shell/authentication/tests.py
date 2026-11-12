@@ -185,15 +185,15 @@ class AuthenticationTests(TestCase):
         response = self.client.get(reverse("home"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Entrar")
+        self.assertContains(response, "Login")
         self.assertContains(response, "Cadastre-se")
 
     def test_register_choice_page_loads(self):
         response = self.client.get(reverse("register"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Sou aluno")
-        self.assertContains(response, "Sou professor")
+        self.assertContains(response, "Aluno")
+        self.assertContains(response, "Professor")
 
     def test_student_register_page_loads(self):
         response = self.client.get(
