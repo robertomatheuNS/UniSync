@@ -1,83 +1,120 @@
 <script setup>
-import { ref } from 'vue'
+import logo from '@/assets/images/logo.gif'
+import avatar from '@/assets/images/avatar.jpg'
+import bellIcon from '@/assets/icons/bell.svg'
+import { logout } from '@/services/shellAuth'
 
-import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
-import KanbanTaskForm from '@/components/kanban/KanbanTaskForm.vue'
-import { KANBAN_COLUMNS } from '@/constants/kanban'
-import { useKanban } from '@/composables/useKanban'
-
-const tokenTeste = ref('')
-const modoDesenvolvimento = import.meta.env.DEV
-
-const {
-  loading,
-  error,
-  getTasksByColumn,
-  loadTasks,
-  addTask,
-  moveTask,
-} = useKanban(() => tokenTeste.value)
+const NOTIFICATION_COUNT = 1
 </script>
 
 <template>
-  <section class="kanban">
-    <h2 class="kanban__title">Kanban</h2>
+  <header class="app-header">
+    <img
+      :src="logo"
+      alt="UniSync"
+      class="app-header__logo"
+    />
 
+    <div class="app-header__actions">
+      <button
+        type="button"
+        class="app-header__bell"
+        aria-label="Notificações"
+      >
+        <img
+          :src="bellIcon"
+          alt=""
+          class="app-header__bell-icon"
+        />
 
-<div v-if="modoDesenvolvimento" class="kanban__teste">
-  <input
-    v-model="tokenTeste"
-    type="password"
-    autocomplete="off"
-    placeholder="JWT do aluno (teste local)"
-    aria-label="Token JWT para teste local"
-  />
+        <span
+          v-if="NOTIFICATION_COUNT > 0"
+          class="app-header__badge"
+        >
+          {{ NOTIFICATION_COUNT }}
+        </span>
+      </button>
 
-  <button type="button" @click="loadTasks">
-    Carregar tarefas
-  </button>
-</div>
-
-<p v-if="loading">Carregando tarefas...</p>
-
-<p v-if="error" role="alert">
-  {{ error }}
-</p>
-
-
-    <KanbanTaskForm @add="addTask" />
-
-    <div class="kanban__board">
-      <KanbanColumn
-        v-for="(column, index) in KANBAN_COLUMNS"
-        :key="column.id"
-        :column="column"
-        :tasks="getTasksByColumn(column.id)"
-        :previous-column-id="KANBAN_COLUMNS[index - 1]?.id ?? null"
-        :next-column-id="KANBAN_COLUMNS[index + 1]?.id ?? null"
-        @move="moveTask"
+      <img
+        :src="avatar"
+        alt="Foto do usuário"
+        class="app-header__avatar"
       />
+
+      <button
+        type="button"
+        class="app-header__logout"
+        @click="logout"
+      >
+        Sair
+      </button>
     </div>
-  </section>
+  </header>
 </template>
 
 <style scoped>
-.kanban {
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  background: var(--color-sidebar);
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-lg);
+  background: var(--color-header);
 }
 
-.kanban__title {
-  margin-bottom: var(--space-md);
-  color: var(--color-text-muted);
-  text-align: center;
-  text-transform: uppercase;
+.app-header__logo {
+  height: 4rem;
 }
 
-.kanban__board {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+.app-header__actions {
+  display: flex;
+  align-items: center;
   gap: var(--space-md);
+}
+
+.app-header__bell {
+  position: relative;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.app-header__bell-icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.app-header__badge {
+  position: absolute;
+  top: -0.25rem;
+  right: -0.25rem;
+  min-width: 1.1rem;
+  padding: 0 0.25rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-error);
+  color: var(--color-on-primary);
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.app-header__avatar {
+  width: 3rem;
+  height: 3rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.app-header__logout {
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.app-header__logout:hover {
+  opacity: 0.85;
 }
 </style>

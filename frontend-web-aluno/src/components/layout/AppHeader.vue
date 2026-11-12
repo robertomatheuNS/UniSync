@@ -2,6 +2,7 @@
 import logo from '@/assets/images/logo.gif'
 import avatar from '@/assets/images/avatar.jpg'
 import bellIcon from '@/assets/icons/bell.svg'
+import { logout } from '@/services/shellAuth'
 
 // TODO: substituir por dados reais quando o back-end existir
 const NOTIFICATION_COUNT = 1

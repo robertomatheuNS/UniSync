@@ -3,22 +3,26 @@ const API_URL =
     import.meta.env.VITE_PYTHON_API_URL || "http://localhost:8000";
 
 async function requisicaoTarefas(caminho, token, opcoes = {}) {
+    if (!token) {
+        throw new Error("Token de autenticação não encontrado.")
+    }
+
     const resposta = await fetch(`${API_URL}${caminho}`, {
         ...opcoes,
         headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-        ...opcoes.headers,
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            ...opcoes.headers,
         },
     });
 
     if (!resposta.ok) {
         const erro = await resposta.json().catch(() => ({}));
 
-    throw new Error(
-        typeof erro.detail === "string"
-            ? erro.detail
-            : `Erro HTTP ${resposta.status}`
+        throw new Error(
+            typeof erro.detail === "string"
+                ? erro.detail
+                : `Erro HTTP ${resposta.status}`
         );
     }
 
@@ -31,6 +35,10 @@ async function requisicaoTarefas(caminho, token, opcoes = {}) {
 
 export function listarTarefas(token) {
     return requisicaoTarefas("/tarefas/listar", token);
+        if (!token) {
+        throw new Error('Token de autenticação não encontrado.')
+        Authorization: `Bearer ${token}`
+}
 }
 
 export function criarTarefa(titulo, token) {
