@@ -58,8 +58,11 @@ def professor_autenticado():
     )
 
 
-def test_criar_oportunidade_retorna_201(monkeypatch, professor_autenticado):
-    mock_criacao = AsyncMock(return_value=oportunidade_salva())
+def test_criar_oportunidade_usa_nome_do_professor_autenticado(monkeypatch, professor_autenticado):
+    async def salvar_oportunidade(oportunidade, professor_id):
+        return {"id": ID_VALIDO, "professor_id": professor_id, **oportunidade.model_dump()}
+
+    mock_criacao = AsyncMock(side_effect=salvar_oportunidade)
 
     monkeypatch.setattr(
         oportunidade_service,
@@ -74,12 +77,15 @@ def test_criar_oportunidade_retorna_201(monkeypatch, professor_autenticado):
 
     assert resposta.status_code == 201
     assert resposta.json()["titulo"] == "Palestra de Python"
+    assert resposta.json()["professor"] == professor_autenticado.nome
+    assert resposta.json()["professor_id"] == str(professor_autenticado.id)
 
     mock_criacao.assert_awaited_once()
 
     args, kwargs = mock_criacao.await_args
 
     assert kwargs["professor_id"] == str(professor_autenticado.id)
+    assert args[0].professor == professor_autenticado.nome
 
 
 def test_criar_oportunidade_invalida_retorna_422(professor_autenticado):
@@ -157,6 +163,20 @@ def test_atualizacao_sem_campos_retorna_400(monkeypatch, professor_autenticado):
 
     assert resposta.status_code == 400
     assert resposta.json()["detail"] == "Nenhum campo foi informado"
+
+
+def test_atualizacao_rejeita_alteracao_do_professor(monkeypatch, professor_autenticado):
+    mock_atualizacao = AsyncMock()
+    monkeypatch.setattr(oportunidade_service, "atualizar_oportunidade", mock_atualizacao)
+
+    resposta = client.patch(
+        f"/oportunidades/atualizar/{ID_VALIDO}",
+        json={"titulo": "Título atualizado", "professor": "Outro professor"},
+    )
+
+    assert resposta.status_code == 422
+    assert resposta.json()["detail"][0]["loc"] == ["body", "professor"]
+    mock_atualizacao.assert_not_awaited()
 
 
 def test_excluir_oportunidade_retorna_204(monkeypatch, professor_autenticado):

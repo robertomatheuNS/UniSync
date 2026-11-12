@@ -14,6 +14,7 @@ router = APIRouter(
 
 @router.post("/criar", status_code=201,response_model=OportunidadeResponse)
 async def criar_oportunidade(oportunidade: OportunidadeCreate, usuario: UsuarioAutenticado = Depends(exigir_professor)):
+    oportunidade = oportunidade.model_copy(update={"professor": usuario.nome})
     return await oportunidade_service.criar_oportunidade(oportunidade, professor_id=str(usuario.id))
 
 
