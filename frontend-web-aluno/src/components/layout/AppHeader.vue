@@ -1,5 +1,5 @@
 <script setup>
-import logo from '@/assets/images/logo.jpg'
+import logo from '@/assets/images/logo.gif'
 import avatar from '@/assets/images/avatar.jpg'
 import bellIcon from '@/assets/icons/bell.svg'
 
@@ -33,7 +33,7 @@ const NOTIFICATION_COUNT = 1
 }
 
 .app-header__logo {
-  height: 3rem;
+  height: 4rem;
 }
 
 .app-header__actions {
