@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.shortcuts import redirect, render
+from django.urls import reverse
 
 from .forms import LoginForm, RegisterForm
 from .services.auth_service import AuthenticationService
@@ -10,21 +11,19 @@ def home_view(request):
 
 def login_view(request):
     if request.session.get("auth_token"):
-        return redirect("dashboard")
+        return redirect("app")
 
     form = LoginForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
-        service = AuthenticationService()
-
-        resultado = service.login(
+        resultado = AuthenticationService().login(
             email=form.cleaned_data["email"],
             senha=form.cleaned_data["senha"],
         )
 
         if resultado.success and resultado.token:
             request.session["auth_token"] = resultado.token
-            return redirect("dashboard")
+            return redirect("app")
 
         form.add_error(
             None,
@@ -40,14 +39,12 @@ def login_view(request):
 
 def register_view(request):
     if request.session.get("auth_token"):
-        return redirect("dashboard")
+        return redirect("app")
 
     form = RegisterForm(request.POST or None)
 
     if request.method == "POST" and form.is_valid():
-        service = AuthenticationService()
-
-        resultado = service.register(
+        resultado = AuthenticationService().register(
             nome=form.cleaned_data["nome"],
             email=form.cleaned_data["email"],
             senha=form.cleaned_data["senha"],
@@ -72,11 +69,32 @@ def register_view(request):
     )
 
 
+def app_view(request, subpath=None):
+    token = request.session.get("auth_token")
+
+    if not token:
+        return redirect("login")
+
+    shell_config = {
+        "isAuthenticated": True,
+        "accessToken": token,
+        "logoutUrl": reverse("logout"),
+    }
+
+    return render(
+        request,
+        "authentication/app.html",
+        {
+            "shell_config": shell_config,
+        },
+    )
+
+
 def dashboard_view(request):
     if not request.session.get("auth_token"):
         return redirect("login")
 
-    return render(request, "authentication/dashboard.html")
+    return redirect("app")
 
 
 def logout_view(request):

@@ -34,7 +34,7 @@ class AuthenticationTests(TestCase):
             },
         )
 
-        self.assertRedirects(response, reverse("dashboard"))
+        self.assertRedirects(response, reverse("app"))
         self.assertIn("auth_token", self.client.session)
 
     def test_dashboard_requires_authentication(self):
@@ -42,15 +42,15 @@ class AuthenticationTests(TestCase):
 
         self.assertRedirects(response, reverse("login"))
 
-    def test_authenticated_user_can_access_dashboard(self):
+    def test_authenticated_user_can_access_app(self):
         session = self.client.session
         session["auth_token"] = "token-de-desenvolvimento"
         session.save()
 
-        response = self.client.get(reverse("dashboard"))
+        response = self.client.get(reverse("app"))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Você está autenticado.")
+        self.assertContains(response, 'id="app"')
 
     def test_logout_clears_session(self):
         session = self.client.session
@@ -131,8 +131,14 @@ class AuthenticationTests(TestCase):
         )
 
         self.assertTrue(resultado.success)
-        self.assertEqual(resultado.user["nome"], "Usuário de Teste")
-        self.assertEqual(resultado.user["email"], "novo@unisync.com")
+        self.assertEqual(
+            resultado.user["nome"],
+            "Usuário de Teste",
+        )
+        self.assertEqual(
+            resultado.user["email"],
+            "novo@unisync.com",
+        )
 
     def test_register_mock_existing_email(self):
         resultado = AuthenticationService().register(
@@ -173,4 +179,87 @@ class AuthenticationTests(TestCase):
         self.assertEqual(
             resultado.user["email"],
             "novo@unisync.com",
+        )
+
+    def test_home_page_loads(self):
+        response = self.client.get(reverse("home"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Entrar")
+        self.assertContains(response, "Cadastre-se")
+
+    def test_register_choice_page_loads(self):
+        response = self.client.get(reverse("register"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sou aluno")
+        self.assertContains(response, "Sou professor")
+
+    def test_student_register_page_loads(self):
+        response = self.client.get(
+            reverse(
+                "register_form",
+                kwargs={"tipo_usuario": "aluno"},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Cadastro de aluno")
+        self.assertNotContains(response, "Código do professor")
+
+    def test_professor_register_page_loads(self):
+        response = self.client.get(
+            reverse(
+                "register_form",
+                kwargs={"tipo_usuario": "professor"},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Cadastro de professor")
+        self.assertContains(response, "Código do professor")
+
+    def test_invalid_user_type_redirects_to_register_choice(self):
+        response = self.client.get(
+            reverse(
+                "register_form",
+                kwargs={"tipo_usuario": "diretor"},
+            )
+        )
+
+        self.assertRedirects(response, reverse("register"))
+
+    def test_professor_register_requires_code(self):
+        response = self.client.post(
+            reverse(
+                "register_form",
+                kwargs={"tipo_usuario": "professor"},
+            ),
+            {
+                "nome": "Professor de Teste",
+                "email": "professor@teste.com",
+                "senha": "12345678",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "O código do professor é obrigatório.",
+        )
+
+    @override_settings(AUTH_MOCK=True)
+    def test_professor_mock_register_success(self):
+        resultado = AuthenticationService().register(
+            nome="Professor de Teste",
+            email="professor@teste.com",
+            senha="12345678",
+            tipo_usuario="professor",
+            codigo_professor="codigo-de-teste",
+        )
+
+        self.assertTrue(resultado.success)
+        self.assertEqual(
+            resultado.user["tipo"],
+            "professor",
         )
