@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">UniSync</string>
+    <string name="home_title">Veja na prática</string>
+    <string name="home_brand">UNISYNC</string>
+    <string name="home_login">Login</string>
+    <string name="home_register">Cadastre-se</string>
+    <string name="home_group_description">Estudantes reunidos usando um notebook</string>
+    <string name="home_students_description">Estudantes sorrindo vistos de baixo</string>
+    <string name="home_auth_pending">Esta tela está em desenvolvimento.</string>
+    <string name="home_close">Fechar</string>
 </resources>

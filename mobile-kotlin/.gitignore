@@ -3,6 +3,9 @@
 *.iml
 local.properties
 
+# Guias locais para agentes de IA
+/AI/
+
 # Caches e saídas de compilação do projeto e dos módulos
 .gradle/
 .kotlin/
