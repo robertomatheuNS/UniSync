@@ -13,6 +13,11 @@ urlpatterns = [
         name="register_form",
     ),
     path("app/", views.app_view, name="app"),
+    path(
+    "app/<path:subpath>",
+    views.app_view,
+    name="app_nested",
+),
     path("dashboard/", views.dashboard_view, name="dashboard"),
     path("logout/", views.logout_view, name="logout"),
 ]

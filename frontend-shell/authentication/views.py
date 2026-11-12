@@ -91,7 +91,7 @@ def register_view(request, tipo_usuario):
     )
 
 
-def app_view(request):
+def app_view(request, subpath=None):
     token = request.session.get("auth_token")
 
     if not token:
