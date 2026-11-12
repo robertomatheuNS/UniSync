@@ -1,5 +1,5 @@
 <script setup>
-import KanbanTask from '@/components/kanban/KanbanTask.vue'
+import KanbanTask from '@/components/kanban/kanbanTask.vue'
 
 defineProps({
   column: { type: Object, required: true },

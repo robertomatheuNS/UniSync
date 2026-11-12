@@ -65,6 +65,6 @@
     var(--color-accent) 100%
   );
   --icon-filter: invert(1);
-  color-scheme: dark;
+  --color-scheme: dark;
 }
 
