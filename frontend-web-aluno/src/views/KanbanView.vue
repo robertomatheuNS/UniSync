@@ -1,120 +1,71 @@
 <script setup>
-import logo from '@/assets/images/logo.gif'
-import avatar from '@/assets/images/avatar.jpg'
-import bellIcon from '@/assets/icons/bell.svg'
-import { logout } from '@/services/shellAuth'
+import { onMounted } from 'vue'
 
-const NOTIFICATION_COUNT = 1
+import KanbanColumn from '@/components/kanban/kanbanColumn.vue'
+import KanbanTaskForm from '@/components/kanban/KanbanTaskForm.vue'
+import { KANBAN_COLUMNS } from '@/constants/kanban'
+import { useKanban } from '@/composables/useKanban'
+import { getAccessToken } from '@/services/shellAuth'
+
+const {
+  loading,
+  error,
+  getTasksByColumn,
+  loadTasks,
+  addTask,
+  moveTask,
+} = useKanban(() => getAccessToken())
+
+onMounted(() => {
+  if (getAccessToken()) {
+    loadTasks()
+  }
+})
 </script>
 
 <template>
-  <header class="app-header">
-    <img
-      :src="logo"
-      alt="UniSync"
-      class="app-header__logo"
-    />
+  <section class="kanban">
+    <h2 class="kanban__title">Kanban</h2>
 
-    <div class="app-header__actions">
-      <button
-        type="button"
-        class="app-header__bell"
-        aria-label="Notificações"
-      >
-        <img
-          :src="bellIcon"
-          alt=""
-          class="app-header__bell-icon"
-        />
+    <p v-if="loading">Carregando tarefas...</p>
 
-        <span
-          v-if="NOTIFICATION_COUNT > 0"
-          class="app-header__badge"
-        >
-          {{ NOTIFICATION_COUNT }}
-        </span>
-      </button>
+    <p v-if="error" role="alert">
+      {{ error }}
+    </p>
 
-      <img
-        :src="avatar"
-        alt="Foto do usuário"
-        class="app-header__avatar"
+    <KanbanTaskForm @add="addTask" />
+
+    <div class="kanban__board">
+      <KanbanColumn
+        v-for="(column, index) in KANBAN_COLUMNS"
+        :key="column.id"
+        :column="column"
+        :tasks="getTasksByColumn(column.id)"
+        :previous-column-id="KANBAN_COLUMNS[index - 1]?.id ?? null"
+        :next-column-id="KANBAN_COLUMNS[index + 1]?.id ?? null"
+        @move="moveTask"
       />
-
-      <button
-        type="button"
-        class="app-header__logout"
-        @click="logout"
-      >
-        Sair
-      </button>
     </div>
-  </header>
+  </section>
 </template>
 
 <style scoped>
-.app-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 var(--space-lg);
-  background: var(--color-header);
+.kanban {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-sidebar);
 }
 
-.app-header__logo {
-  height: 4rem;
-}
-
-.app-header__actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-}
-
-.app-header__bell {
-  position: relative;
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-
-.app-header__bell-icon {
-  width: 2rem;
-  height: 2rem;
-}
-
-.app-header__badge {
-  position: absolute;
-  top: -0.25rem;
-  right: -0.25rem;
-  min-width: 1.1rem;
-  padding: 0 0.25rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-error);
-  color: var(--color-on-primary);
-  font-size: 0.7rem;
+.kanban__title {
+  margin-bottom: var(--space-md);
+  color: var(--color-text-muted);
   text-align: center;
+  text-transform: uppercase;
 }
 
-.app-header__avatar {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.app-header__logout {
-  padding: 0.6rem 1rem;
-  border: none;
-  border-radius: var(--radius-pill);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  cursor: pointer;
-  font: inherit;
-  font-weight: 600;
-}
-
-.app-header__logout:hover {
-  opacity: 0.85;
+.kanban__board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-md);
 }
 </style>
