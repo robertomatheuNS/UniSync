@@ -1,127 +1,72 @@
-
 import { ref } from 'vue'
-
 import {
   listarTarefas,
   criarTarefa,
   atualizarTarefa,
+  excluirTarefa,
 } from '@/services/tarefasService'
-
-const STATUS_PARA_COLUNA = {
-  A_FAZER: 'todo',
-  EM_ANDAMENTO: 'doing',
-  CONCLUIDO: 'done',
-}
-
-const COLUNA_PARA_STATUS = {
-  todo: 'A_FAZER',
-  doing: 'EM_ANDAMENTO',
-  done: 'CONCLUIDO',
-}
-
-function converterTarefa(tarefa) {
-  const columnId = STATUS_PARA_COLUNA[tarefa.status]
-
-  if (!columnId) {
-    throw new Error(`Status desconhecido: ${tarefa.status}`)
-  }
-
-  return {
-    id: tarefa.id,
-    title: tarefa.titulo,
-    columnId,
-  }
-}
-
-export function useKanban(obterToken) {
-  const tasks = ref([])
-  const loading = ref(false)
-  const error = ref('')
-
-  function tokenAtual() {
-    const token = obterToken()
-
-    if (!token) {
-      throw new Error('Informe um token de aluno.')
-    }
-
-    return token
-  }
-
-  function getTasksByColumn(columnId) {
-    return tasks.value.filter(
-      (task) => task.columnId === columnId
-    )
-  }
-
-  async function loadTasks() {
+const COLUNAS = { A_FAZER: 'todo', EM_ANDAMENTO: 'doing', CONCLUIDO: 'done' }
+const STATUS = { todo: 'A_FAZER', doing: 'EM_ANDAMENTO', done: 'CONCLUIDO' }
+const converter = (t) => ({
+  id: t.id,
+  title: t.titulo,
+  columnId: COLUNAS[t.status],
+})
+export function useKanban() {
+  const tasks = ref([]),
+    loading = ref(false),
+    error = ref('')
+  async function executar(acao) {
+    if (loading.value) return false
     loading.value = true
     error.value = ''
-
     try {
-      const resultado = await listarTarefas(tokenAtual())
-
-      tasks.value = resultado.map(converterTarefa)
-    } catch (erro) {
-      tasks.value = []
-      error.value = erro.message
+      await acao()
+      return true
+    } catch (e) {
+      error.value = e.message
+      return false
     } finally {
       loading.value = false
     }
   }
-
-  async function addTask(title) {
-    const cleanTitle = title.trim()
-
-    if (!cleanTitle) return
-
-    error.value = ''
-
-    try {
-      const tarefa = await criarTarefa(
-        cleanTitle,
-        tokenAtual()
+  const loadTasks = () =>
+    executar(async () => {
+      tasks.value = (await listarTarefas()).map(converter)
+    })
+  const addTask = (titulo) =>
+    executar(async () => {
+      tasks.value.push(converter(await criarTarefa(titulo.trim())))
+    })
+  const editTask = (id, titulo) =>
+    executar(async () => {
+      const item = converter(
+        await atualizarTarefa(id, { titulo: titulo.trim() }),
       )
-
-      tasks.value.push(converterTarefa(tarefa))
-    } catch (erro) {
-      error.value = erro.message
-    }
-  }
-
-  async function moveTask(taskId, columnId) {
-    const status = COLUNA_PARA_STATUS[columnId]
-
-    if (!status) return
-
-    const task = tasks.value.find(
-      (item) => item.id === taskId
-    )
-
-    if (!task || task.columnId === columnId) return
-
-    error.value = ''
-
-    try {
-      const atualizada = await atualizarTarefa(
-        taskId,
-        { status },
-        tokenAtual()
+      tasks.value = tasks.value.map((t) => (t.id === id ? item : t))
+    })
+  const moveTask = (id, coluna) =>
+    executar(async () => {
+      if (!STATUS[coluna]) throw new Error('Coluna inválida')
+      const item = converter(
+        await atualizarTarefa(id, { status: STATUS[coluna] }),
       )
-
-      task.columnId = converterTarefa(atualizada).columnId
-    } catch (erro) {
-      error.value = erro.message
-    }
-  }
-
+      tasks.value = tasks.value.map((t) => (t.id === id ? item : t))
+    })
+  const deleteTask = (id) =>
+    executar(async () => {
+      await excluirTarefa(id)
+      tasks.value = tasks.value.filter((t) => t.id !== id)
+    })
   return {
     tasks,
     loading,
     error,
-    getTasksByColumn,
     loadTasks,
     addTask,
+    editTask,
     moveTask,
+    deleteTask,
+    getTasksByColumn: (id) => tasks.value.filter((t) => t.columnId === id),
   }
 }

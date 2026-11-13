@@ -7,6 +7,7 @@ from django.urls import reverse
 from .services.auth_service import AuthenticationService
 
 
+@override_settings(AUTH_MOCK=True)
 class AuthenticationTests(TestCase):
     def test_login_page_loads(self):
         response = self.client.get(reverse("login"))
@@ -263,3 +264,28 @@ class AuthenticationTests(TestCase):
             resultado.user["tipo"],
             "professor",
         )
+
+@override_settings(AUTH_MOCK=False, API_BASE_URL="http://api-dotnet:8080")
+class RealAuthenticationFlowTests(TestCase):
+    def test_professor_form_has_code(self):
+        response = self.client.get("/cadastro/professor/")
+        self.assertContains(response, 'name="codigo_professor"')
+        from .forms import RegisterForm
+        self.assertTrue(RegisterForm(tipo_usuario="professor").fields["codigo_professor"].required)
+
+    @patch("authentication.services.auth_service.requests.post")
+    def test_login_uses_our_api_and_refuses_redirect(self, post):
+        post.return_value.status_code = 302
+        result = AuthenticationService().login("teste@example.com", "senha-teste")
+        self.assertFalse(result.success)
+        self.assertEqual(post.call_args.args[0], "http://api-dotnet:8080/api/usuarios/login")
+        self.assertFalse(post.call_args.kwargs["allow_redirects"])
+
+    @patch("authentication.services.auth_service.requests.post")
+    def test_professor_code_sent_to_our_api(self, post):
+        post.return_value.status_code = 201
+        post.return_value.json.return_value = {"id":"teste"}
+        result = AuthenticationService().register("Teste", "teste@example.com", "senha-teste", "professor", "CODIGO-TESTE")
+        self.assertTrue(result.success)
+        self.assertEqual(post.call_args.args[0], "http://api-dotnet:8080/api/usuarios/professores")
+        self.assertEqual(post.call_args.kwargs["json"]["codigoProfessor"], "CODIGO-TESTE")

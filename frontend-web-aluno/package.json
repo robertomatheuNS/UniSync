@@ -10,14 +10,18 @@
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:browser": "npm run build && playwright test"
   },
   "dependencies": {
+    "sortablejs": "^1.15.7",
     "vue": "rc",
     "vue-router": "^5.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.0",
     "@vitejs/plugin-vue": "^6.0.8",
     "eslint": "^10.10.0",
     "eslint-config-prettier": "^10.1.8",

@@ -79,6 +79,7 @@ class AuthenticationService:
                     "senha": senha,
                 },
                 timeout=5,
+                allow_redirects=False,
             )
         except requests.RequestException:
             return AuthenticationResult(
@@ -164,6 +165,7 @@ class AuthenticationService:
                 f"{settings.API_BASE_URL}{endpoint}",
                 json=payload,
                 timeout=5,
+                allow_redirects=False,
             )
         except requests.RequestException:
             return RegistrationResult(

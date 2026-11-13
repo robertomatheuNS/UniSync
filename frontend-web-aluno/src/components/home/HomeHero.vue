@@ -1,13 +1,14 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { authUrl } from '@/utils/authUrl'
 import BaseButton from '@/components/base/BaseButton.vue'
 import studentsImage from '@/assets/images/students-looking-down.jpg'
 import groupStudyImage from '@/assets/images/group-study.jpg'
 
-const router = useRouter()
-
+function goToLogin() {
+  window.location.assign(authUrl('/login/'))
+}
 function goToRegister() {
-  router.push({ name: 'register' })
+  window.location.assign(authUrl('/cadastro/'))
 }
 </script>
 
@@ -16,7 +17,7 @@ function goToRegister() {
     <div class="hero__top">
       <h1 class="hero__title">Veja na prática</h1>
       <nav class="hero__actions" aria-label="Acesso">
-        <BaseButton>Login</BaseButton>
+        <BaseButton @click="goToLogin">Login</BaseButton>
         <BaseButton @click="goToRegister">Cadastre-se</BaseButton>
       </nav>
     </div>

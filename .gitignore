@@ -22,3 +22,7 @@
 
 # Sistema
 .DS_Store
+
+# Resultados locais dos testes de navegador
+**/test-results/
+**/playwright-report/

@@ -1,0 +1,113 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[brazil]{babel}
+\usepackage[margin=2.4cm]{geometry}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{listings}
+\title{UniSync --- Integração dos painéis}
+\author{Equipe UniSync}
+\date{13 de novembro de 2026}
+\begin{document}
+\maketitle
+\tableofcontents
+\section{Visão geral}
+O sistema mantém o shell Django como entrada de autenticação. O Vue apresenta os painéis, a API .NET autentica e cadastra usuários no banco relacional, e o FastAPI gerencia oportunidades, tarefas e lembretes no MongoDB.
+A identidade usada pelo FastAPI vem do JWT emitido pela API .NET.
+
+\section{Autenticação e cadastro}
+A entrada local é \url{http://localhost:8081/login/}.
+O cadastro de professores fica em \url{http://localhost:8081/cadastro/professor/} e exige o código fornecido pela equipe.
+O shell envia nome, e-mail, senha e \texttt{codigoProfessor} para \texttt{/api/usuarios/professores}. A validação do código pertence à API .NET.
+Alunos são cadastrados em \texttt{/api/usuarios}. O login usa \texttt{/api/usuarios/login}.
+O shell guarda o token na sessão e o fornece ao Vue pelo objeto \texttt{UNISYNC\_SHELL}. As chamadas ao FastAPI usam o cabeçalho Authorization com Bearer.
+O cadastro Vue antigo foi substituído por encaminhamento ao shell, eliminando a entrada simulada no dashboard.
+O modo \texttt{AUTH\_MOCK} fica desabilitado por padrão e só é ativado explicitamente nos testes.
+As requisições de autenticação não seguem redirecionamentos HTTP para outros provedores.
+Os nomes de claims contendo schemas.microsoft.com são identificadores do formato JWT e não endpoints de autenticação.
+A assinatura, o emissor, o destinatário e a expiração são validados no FastAPI. A leitura de claims no frontend orienta a interface.
+A opção Sair encerra a sessão Django.
+
+\section{Permissões}
+\begin{longtable}{p{4cm}p{10cm}}
+Recurso & Regra \\ \hline
+Oportunidades & Consulta pública conforme contrato existente. Apenas professores criam. Atualização e exclusão exigem autoria. Nome e ID do autor vêm do JWT. \\
+Lembretes & Alunos e professores autenticados gerenciam somente seus próprios lembretes. O ID do proprietário não é aceito no corpo da requisição. \\
+Kanban & Disponível para alunos autenticados. Cada aluno acessa somente suas tarefas, conforme a regra existente do FastAPI. \\
+\end{longtable}
+Lembretes de outro usuário retornam 404 nas operações de alteração e exclusão. O filtro MongoDB inclui simultaneamente o identificador do documento e o proprietário. Atualizações usam \texttt{\$set} atômico.
+As origens locais autorizadas no CORS incluem as portas 5173 e 8081 de localhost e 127.0.0.1.
+
+\section{Lembretes persistentes}
+A coleção \texttt{lembretes} contém \texttt{usuario\_id}, \texttt{titulo} e \texttt{concluido}.
+O título tem de 1 a 200 caracteres após remoção de espaços nas extremidades.
+Há índice por usuário e ordenação de listagem pelo identificador.
+\begin{longtable}{p{2cm}p{7cm}p{5cm}}
+Método & Rota & Resultado \\ \hline
+GET & /lembretes/listar & Lista do usuário \\
+POST & /lembretes/criar & Criação, HTTP 201 \\
+PATCH & /lembretes/atualizar/\{id\} & Alteração de título ou conclusão \\
+DELETE & /lembretes/excluir/\{id\} & Exclusão, HTTP 204 \\
+\end{longtable}
+O PATCH rejeita corpo vazio, campos desconhecidos e valores nulos. Operações concluídas atualizam a interface após confirmação da API. Erros preservam os dados de entrada.
+O painel lateral permite adicionar, editar, concluir, reabrir e excluir lembretes.
+
+\section{Dashboard e oportunidades}
+Dashboard e página do professor compartilham \texttt{OportunidadesPanel.vue}, o formulário e a janela modal.
+O dashboard inicia com oportunidades futuras. A página do professor inclui também eventos passados.
+Ambos limitam a consulta a 15 itens em ordem de data. Ao clicar, o detalhe atualizado é buscado na API e apresenta disciplina, professor, data, tipo e descrição.
+Professores autores recebem as ações de editar e excluir. A exclusão solicita confirmação.
+Datas sem fuso retornadas pela API são interpretadas como UTC e exibidas no horário local. Formulários convertem o horário local para ISO UTC.
+Disciplinas foi removida do menu e sua antiga rota encaminha ao dashboard.
+
+\section{Calendário}
+O calendário calcula os dias e o alinhamento de cada mês, incluindo anos bissextos. Permite avançar e retroceder meses, selecionar uma data e voltar para hoje. O dia atual é atualizado periodicamente.
+A seleção do calendário é visual e não cria eventos nem altera os filtros das oportunidades.
+
+\section{Kanban}
+A tela usa a sessão autenticada e as rotas existentes de tarefas.
+Os estados são A\_FAZER, EM\_ANDAMENTO e CONCLUIDO.
+SortableJS implementa arraste com mouse e toque. O DOM é restaurado antes da aplicação da resposta para manter o Vue responsável pelo estado.
+Arrastar para a lixeira abre uma confirmação. Também há controles de status e exclusão por botão para teclado.
+A edição altera o título. Durante uma requisição, os controles ficam bloqueados para evitar operações simultâneas conflitantes. Em falha, o estado confirmado é preservado.
+As animações respeitam a preferência por movimento reduzido.
+
+\section{Organização do código}
+\begin{itemize}
+\item FastAPI: modelos, schemas, repositório e router próprios para lembretes.
+\item Vue: serviços HTTP em services, estado do Kanban em composables, componentes reutilizáveis em components.
+\item Os utilitários de sessão, datas e URLs de autenticação concentram regras compartilhadas.
+\item Os testes Python cobrem validação, autenticação, autoria e CORS. Os testes frontend cobrem calendário, sessão, datas e fluxos de navegador.
+\end{itemize}
+
+\section{Execução local}
+Na raiz do projeto, após alterações de dependências ou do backend, executar:
+\begin{verbatim}
+docker compose up -d --build --no-deps \
+  api-python frontend-web frontend-shell
+\end{verbatim}
+No PowerShell, executar o comando acima em uma única linha, sem as barras de continuação.
+O Compose de desenvolvimento monta os arquivos locais do shell e Vue. Alterações nas dependências e no FastAPI exigem reconstrução da imagem.
+O endereço de uso é \url{http://localhost:8081/app/}.
+Variáveis relevantes: API\_BASE\_URL no shell, VITE\_PYTHON\_API\_URL e VITE\_SHELL\_URL no frontend, e as configurações MongoDB/JWT existentes no FastAPI.
+O acesso ao site da equipe fica no menu lateral em \href{https://teste2234234.my.canva.site/in-cio}{Conheça a equipe}.
+
+\section{Testes e limites de validação}
+Nesta revisão passaram 78 testes do FastAPI sem E2E, 22 testes do shell Django, 3 testes unitários JavaScript e 6 testes de navegador. A compilação do frontend e a análise ESLint dos arquivos alterados passaram. Há um aviso de depreciação do TestClient/httpx no ambiente Python. A validação do CRUD com login real continua sendo uma etapa de integração do ambiente.
+\begin{verbatim}
+# backend-python
+python -m pytest -m "not e2e"
+# frontend-shell
+python manage.py test authentication
+# frontend-web-aluno
+npm run test:unit
+npx playwright install chromium
+npm run test:browser
+npm run build
+\end{verbatim}
+Os testes de navegador interceptam a API com dados controlados para validar interações e erros sem modificar o banco usado pela equipe. A simulação preserva os itens durante recargas da página.
+A validação completa em ambiente real requer uma conta de aluno, uma conta de professor com código válido e MongoDB de teste. Conferir criação, recarga, alteração, conclusão e exclusão dos lembretes, e arraste e recarga das tarefas. Usar duas contas para confirmar isolamento.
+Não armazenar senhas, tokens ou códigos reais neste documento ou nos testes.
+\end{document}
+

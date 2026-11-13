@@ -1,159 +1,214 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { onMounted, ref } from 'vue'
+import {
+  listarLembretes,
+  criarLembrete,
+  atualizarLembrete,
+  excluirLembrete,
+} from '@/services/lembretesService'
 import trashIcon from '@/assets/icons/trash.svg'
-
-const MIN_ROWS = 6
-
-function createReminder() {
-  return { id: crypto.randomUUID(), text: '', done: false }
-}
-
-const reminders = ref(Array.from({ length: MIN_ROWS }, createReminder))
-
-const hasCompleted = computed(() => reminders.value.some((reminder) => reminder.done))
-
-function addReminder() {
-  reminders.value.push(createReminder())
-}
-
-function fillEmptyRows() {
-  while (reminders.value.length < MIN_ROWS) {
-    reminders.value.push(createReminder())
+const itens = ref([]),
+  titulo = ref(''),
+  editando = ref(null),
+  ocupado = ref(false),
+  erro = ref('')
+async function carregar() {
+  ocupado.value = true
+  try {
+    itens.value = await listarLembretes()
+    erro.value = ''
+  } catch (e) {
+    erro.value = e.message
+  } finally {
+    ocupado.value = false
   }
 }
-
-function removeCompleted() {
-  reminders.value = reminders.value.filter((reminder) => !reminder.done)
-  fillEmptyRows()
+async function executar(acao) {
+  if (ocupado.value) return
+  ocupado.value = true
+  erro.value = ''
+  try {
+    await acao()
+  } catch (e) {
+    erro.value = e.message
+  } finally {
+    ocupado.value = false
+  }
 }
+function salvar() {
+  const texto = titulo.value.trim()
+  if (!texto) return
+  executar(async () => {
+    if (editando.value) {
+      const atualizado = await atualizarLembrete(editando.value, {
+        titulo: texto,
+      })
+      itens.value = itens.value.map((item) =>
+        item.id === atualizado.id ? atualizado : item,
+      )
+    } else itens.value.push(await criarLembrete(texto))
+    cancelar()
+  })
+}
+function cancelar() {
+  editando.value = null
+  titulo.value = ''
+}
+function editar(item) {
+  editando.value = item.id
+  titulo.value = item.titulo
+}
+function concluir(item) {
+  executar(async () => {
+    const atualizado = await atualizarLembrete(item.id, {
+      concluido: !item.concluido,
+    })
+    itens.value = itens.value.map((valor) =>
+      valor.id === item.id ? atualizado : valor,
+    )
+  })
+}
+function excluir(item) {
+  executar(async () => {
+    await excluirLembrete(item.id)
+    itens.value = itens.value.filter((valor) => valor.id !== item.id)
+    if (editando.value === item.id) cancelar()
+  })
+}
+onMounted(carregar)
 </script>
-
 <template>
-  <section class="reminders" aria-labelledby="reminders-title">
-    <h2 id="reminders-title" class="reminders__title">Lembretes</h2>
-
-    <ul class="reminders__list">
-      <li v-for="(reminder, index) in reminders" :key="reminder.id" class="reminders__item">
+  <section
+    class="lembretes"
+    aria-labelledby="lembretes-titulo"
+    :aria-busy="ocupado"
+  >
+    <h2 id="lembretes-titulo">Meus lembretes</h2>
+    <p v-if="erro" role="alert">
+      {{ erro }}
+      <button class="botao" :disabled="ocupado" @click="carregar">
+        Tentar novamente
+      </button>
+    </p>
+    <form @submit.prevent="salvar">
+      <label for="lembrete-texto">{{
+        editando ? 'Editar lembrete' : 'Novo lembrete'
+      }}</label>
+      <input
+        id="lembrete-texto"
+        v-model="titulo"
+        maxlength="200"
+        required
+        :disabled="ocupado"
+        placeholder="O que você precisa lembrar?"
+      />
+      <div class="acoes">
+        <button
+          v-if="editando"
+          type="button"
+          class="botao"
+          :disabled="ocupado"
+          @click="cancelar"
+        >
+          Cancelar</button
+        ><button class="botao botao--principal" :disabled="ocupado">
+          {{ editando ? 'Salvar' : 'Adicionar' }}
+        </button>
+      </div>
+    </form>
+    <p v-if="!itens.length && !ocupado">Seus lembretes aparecerão aqui.</p>
+    <TransitionGroup name="lista" tag="ul">
+      <li v-for="item in itens" :key="item.id">
         <input
-          v-model="reminder.done"
           type="checkbox"
-          class="reminders__check"
-          :aria-label="`Concluir lembrete ${index + 1}`"
+          :checked="item.concluido"
+          :disabled="ocupado"
+          :aria-label="'Concluir ' + item.titulo"
+          @change="concluir(item)"
         />
-        <input
-          v-model="reminder.text"
-          type="text"
-          class="reminders__text"
-          :class="{ 'reminders__text--done': reminder.done }"
-          :aria-label="`Texto do lembrete ${index + 1}`"
-        />
+        <button
+          class="lembrete-texto"
+          :class="{ concluido: item.concluido }"
+          :disabled="ocupado"
+          :aria-label="'Editar ' + item.titulo"
+          @click="editar(item)"
+        >
+          {{ item.titulo }}
+        </button>
+        <button
+          class="icone"
+          :disabled="ocupado"
+          :aria-label="'Excluir ' + item.titulo"
+          @click="excluir(item)"
+        >
+          <img :src="trashIcon" alt="" />
+        </button>
       </li>
-    </ul>
-
-    <div class="reminders__footer">
-      <button
-        type="button"
-        class="reminders__trash"
-        :disabled="!hasCompleted"
-        aria-label="Apagar lembretes marcados"
-        @click="removeCompleted"
-      >
-        <img :src="trashIcon" alt="" class="reminders__trash-icon icon" />
-      </button>
-
-      <button
-        type="button"
-        class="reminders__add"
-        aria-label="Adicionar lembrete"
-        @click="addReminder"
-      >
-        +
-      </button>
-    </div>
+    </TransitionGroup>
   </section>
 </template>
-
 <style scoped>
-.reminders {
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
+.lembretes {
+  padding: 1rem;
+  border-radius: 16px;
   background: var(--color-card);
+  display: grid;
+  gap: 1rem;
 }
-
-.reminders__title {
-  margin-bottom: var(--space-md);
-  color: var(--color-text-muted);
-  font-size: 1.5rem;
-  text-align: center;
-  text-transform: uppercase;
+h2 {
+  font-size: 1.1rem;
 }
-
-.reminders__list {
-  list-style: none;
-  max-height: 18rem;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
+form {
+  display: grid;
+  gap: 0.6rem;
 }
-
-.reminders__item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+label,
+p {
+  font-size: 0.85rem;
 }
-
-.reminders__check {
-  width: 1.5rem;
-  height: 1.5rem;
-  flex-shrink: 0;
-  accent-color: var(--color-text-muted);
-}
-
-.reminders__text {
-  flex: 1;
+input:not([type='checkbox']) {
   min-width: 0;
-  border: none;
-  border-bottom: 2px solid var(--color-text-muted);
-  background: transparent;
+  width: 100%;
+  padding: 0.7rem;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-field);
   font: inherit;
 }
-
-.reminders__text--done {
-  color: var(--color-text-muted);
-  text-decoration: line-through;
+ul {
+  list-style: none;
+  max-height: 24rem;
+  overflow: auto;
 }
-
-.reminders__footer {
-  margin-top: var(--space-md);
+li {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--color-sidebar);
 }
-
-.reminders__trash {
-  padding: 0.25rem;
-  border: none;
+.lembrete-texto {
+  flex: 1;
+  text-align: left;
   background: none;
+  border: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
 }
-
-.reminders__trash:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
+.concluido {
+  text-decoration: line-through;
+  opacity: 0.65;
 }
-
-.reminders__trash-icon {
-  width: 1.75rem;
-  height: 1.75rem;
+.icone {
+  border: 0;
+  background: none;
+  padding: 0.4rem;
 }
-
-.reminders__add {
-  width: 2rem;
-  height: 2rem;
-  border: none;
-  border-radius: 50%;
-  background: var(--color-text-muted);
-  color: var(--color-on-primary);
-  font-size: 1.25rem;
+.icone img {
+  width: 1.2rem;
+  filter: var(--icon-filter);
+}
+[role='alert'] {
+  color: var(--color-error);
 }
 </style>

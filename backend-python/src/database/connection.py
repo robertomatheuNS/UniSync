@@ -4,6 +4,7 @@ from beanie import init_beanie
 from src.core.config import settings
 from src.models.oportunidade import Oportunidade
 from src.models.tarefa import Tarefa
+from src.models.lembrete import Lembrete
 
 
 client = AsyncMongoClient(settings.mongodb_url)
@@ -14,7 +15,7 @@ async def conectar_mongodb():
 
     await init_beanie(
         database=client[settings.mongodb_database],
-        document_models=[Oportunidade, Tarefa]
+        document_models=[Oportunidade, Tarefa, Lembrete]
     )
 
     print("Conexão com MongoDB estabelecida!")

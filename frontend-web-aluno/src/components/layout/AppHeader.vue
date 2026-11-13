@@ -1,4 +1,5 @@
 <script setup>
+import { authUrl } from '@/utils/authUrl'
 import logo from '@/assets/images/logo.svg'
 import avatar from '@/assets/images/avatar.jpg'
 import bellIcon from '@/assets/icons/bell.svg'
@@ -14,27 +15,17 @@ const NOTIFICATION_COUNT = 1
 
     <div class="app-header__actions">
       <ThemeToggle />
+      <a :href="authUrl('/logout/')" class="app-header__logout">Sair</a>
 
       <button type="button" class="app-header__bell" aria-label="Notificações">
-        <img
-          :src="bellIcon"
-          alt=""
-          class="app-header__bell-icon"
-        />
+        <img :src="bellIcon" alt="" class="app-header__bell-icon" />
 
-        <span
-          v-if="NOTIFICATION_COUNT > 0"
-          class="app-header__badge"
-        >
+        <span v-if="NOTIFICATION_COUNT > 0" class="app-header__badge">
           {{ NOTIFICATION_COUNT }}
         </span>
       </button>
 
-      <img
-        :src="avatar"
-        alt="Foto do usuário"
-        class="app-header__avatar"
-      />
+      <img :src="avatar" alt="Foto do usuário" class="app-header__avatar" />
     </div>
   </header>
 </template>
@@ -87,5 +78,9 @@ const NOTIFICATION_COUNT = 1
   height: 3rem;
   border-radius: 50%;
   object-fit: cover;
+}
+.app-header__logout {
+  color: var(--color-text);
+  font-size: 0.85rem;
 }
 </style>

@@ -9,7 +9,7 @@ import bannerImage from '@/assets/images/focus-banner.jpg'
     aria-label="Destaque"
   >
     <h2 class="promo-banner__title">
-      <span class="promo-banner__accent">Semana</span> De Foco&gt;
+      <span class="promo-banner__accent">Semana</span> De Foco
     </h2>
     <p class="promo-banner__subtitle">
       Dicas de estudos
