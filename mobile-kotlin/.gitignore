@@ -19,3 +19,6 @@ build/
 *.keystore
 keystore.properties
 .DS_Store
+
+# Documentação de acompanhamento local
+/docs/TURMAS-E-AVISOS.md

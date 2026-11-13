@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
@@ -24,6 +25,7 @@ import br.com.unisync.mobile.domain.tarefas.StatusTarefa
 import br.com.unisync.mobile.ui.componentes.*
 import br.com.unisync.mobile.ui.tarefas.*
 import br.com.unisync.mobile.ui.oportunidades.*
+import br.com.unisync.mobile.ui.academico.*
 import kotlinx.coroutines.launch
 
 private data class Destino(val rota: String, val titulo: String, val rotulo: String = titulo)
@@ -47,10 +49,17 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
         usuarioId = sessao.usuarioId, nomeProfessor = sessao.nome, professor = sessao.perfil == PerfilUsuario.PROFESSOR) }
     val oportunidades by modeloOportunidades.estado.collectAsStateWithLifecycle()
     DisposableEffect(modeloOportunidades) { onDispose { modeloOportunidades.fechar() } }
+    val professor = sessao.perfil == PerfilUsuario.PROFESSOR
+    val professorId = sessao.usuarioId.takeIf { professor }
+    val modeloAcademico = remember(sessao.token) { ModeloAcademico(aplicacao.academico, sessao.token,
+        sessao.usuarioId, professor, aoExpirar) }
+    val academico by modeloAcademico.estado.collectAsStateWithLifecycle()
+    DisposableEffect(modeloAcademico) { onDispose { modeloAcademico.fechar() } }
+    var filtroAvisos by rememberSaveable { mutableStateOf<String?>(null) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle, modelo) {
+    DisposableEffect(lifecycle, modelo, modeloOportunidades, modeloAcademico) {
         val observador = LifecycleEventObserver { _, evento -> if (evento == Lifecycle.Event.ON_START) {
-            modelo?.atualizar(); modeloOportunidades.atualizar()
+            modelo?.atualizar(); modeloOportunidades.atualizar(); modeloAcademico.atualizar()
         } }
         lifecycle.addObserver(observador)
         onDispose { lifecycle.removeObserver(observador) }
@@ -58,7 +67,12 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
     val estado = modelo?.estado?.collectAsStateWithLifecycle()?.value ?: EstadoTarefas(lendo = false)
     val escopo = rememberCoroutineScope()
     var erroPreferencia by remember { mutableStateOf<String?>(null) }
-    Scaffold(topBar = { TopAppBar(title = { Text(destinos.find { it.rota == rota }?.titulo ?: "UniSync") }) },
+    LaunchedEffect(rota) { if (rota == "turmas" || rota == "avisos") modeloAcademico.atualizar() }
+    Scaffold(topBar = { TopAppBar(title = { Text(when (rota) {
+        "turmas" -> "Turmas"; "avisos" -> "Avisos"; else -> destinos.find { it.rota == rota }?.titulo ?: "UniSync"
+    }) }, navigationIcon = {
+        if (!professor && (rota == "turmas" || rota == "avisos")) TextButton(onClick = { nav.popBackStack() }) { Text("Voltar") }
+    }) },
         bottomBar = { NavigationBar { destinos.forEachIndexed { indice, destino ->
             NavigationBarItem(selected = rota == destino.rota, onClick = {
                 nav.navigate(destino.rota) {
@@ -73,6 +87,16 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                 LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     item { Text("Olá, ${sessao.nome}", style = MaterialTheme.typography.headlineSmall,
                         modifier = Modifier.semantics { heading() }) }
+                    item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Vida acadêmica", style = MaterialTheme.typography.titleLarge)
+                        Text("${academico.turmas.size} turmas • ${if (professor) academico.avisos.size.toString() + " avisos publicados" else academico.avisos.count { !it.lido }.toString() + " avisos não lidos"}")
+                        if (academico.lendo) LinearProgressIndicator(Modifier.fillMaxWidth())
+                        academico.erro?.let { MensagemDeErro(it) }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = { nav.navigate("turmas") }) { Text("Minhas turmas") }
+                            OutlinedButton(onClick = { filtroAvisos = null; nav.navigate("avisos") }) { Text("Ver avisos") }
+                        }
+                    } } }
                     if (modelo != null) {
                         item { StatusSincronizacao(estado) }
                         estado.erro?.let { item { MensagemDeErro(it) } }
@@ -82,7 +106,7 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                             Button(onClick = { nav.navigate("tarefas") }) { Text("Organizar tarefas") }
                             TextButton(onClick = modelo::atualizar, enabled = !estado.atualizando) { Text("Atualizar") }
                         } } }
-                    } else item { ConteudoVazio("Área do professor", "Acompanhe sua conta e acesse os módulos pela navegação abaixo.") }
+                    }
                     item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Oportunidades", style = MaterialTheme.typography.titleLarge)
                         Text("${oportunidades.itens.count { !it.encerrada() }} próximos eventos entre os itens carregados")
@@ -108,13 +132,15 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                     }
                     erroPreferencia?.let { item { MensagemDeErro(it) } }
                     mensagem?.let { item { MensagemDeErro(it) } }
-                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando && !oportunidades.salvando && !oportunidades.atualizando) { Text("Sair da conta") } }
+                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando && !oportunidades.salvando && !oportunidades.atualizando && !academico.salvando && !academico.atualizando) { Text("Sair da conta") } }
                 }
             }
-            listOf("turmas", "avisos").forEach { modulo -> composable(modulo) {
-                ConteudoVazio("${destinos.find { it.rota == modulo }?.titulo ?: modulo} ainda não disponível",
-                    "Este módulo será liberado nas próximas etapas do aplicativo.")
-            } }
+            composable("turmas") { TelaTurmas(academico, professorId, modeloAcademico::atualizar,
+                modeloAcademico::salvarTurma, modeloAcademico::entrar, modeloAcademico::arquivar,
+                aoVerAvisos = { filtroAvisos = it; nav.navigate("avisos") }, aoLimparMensagem = modeloAcademico::limparMensagem) }
+            composable("avisos") { TelaAvisos(academico, professorId, filtroAvisos, modeloAcademico::atualizar,
+                modeloAcademico::salvarAviso, modeloAcademico::excluirAviso, modeloAcademico::marcarLido,
+                aoAbrirTurmas = { nav.navigate("turmas") }, aoLimparMensagem = modeloAcademico::limparMensagem) }
         }
     }
 }

@@ -6,6 +6,7 @@ import br.com.unisync.mobile.data.local.BancoUniSync
 import br.com.unisync.mobile.data.local.PreferenciasUniSync
 import br.com.unisync.mobile.data.RepositorioTarefas
 import br.com.unisync.mobile.data.RepositorioOportunidades
+import br.com.unisync.mobile.data.RepositorioAcademico
 import br.com.unisync.mobile.data.remote.ClienteAcademico
 
 class UniSyncApplication : Application() {
@@ -13,5 +14,6 @@ class UniSyncApplication : Application() {
         .addMigrations(BancoUniSync.MIGRACAO_1_2, BancoUniSync.MIGRACAO_2_3).build() }
     val tarefas by lazy { RepositorioTarefas(banco.tarefas(), ClienteAcademico()) }
     val oportunidades by lazy { RepositorioOportunidades(banco.oportunidades(), ClienteAcademico()) }
+    val academico by lazy { RepositorioAcademico() }
     val preferencias by lazy { PreferenciasUniSync(this) }
 }
