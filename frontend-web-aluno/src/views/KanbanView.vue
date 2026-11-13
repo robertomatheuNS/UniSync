@@ -1,13 +1,11 @@
 <script setup>
-import { ref } from 'vue'
+import { onMounted } from 'vue'
 
 import KanbanColumn from '@/components/kanban/kanbanColumn.vue'
 import KanbanTaskForm from '@/components/kanban/kanbanTaskForm.vue'
 import { KANBAN_COLUMNS } from '@/constants/kanban'
 import { useKanban } from '@/composables/useKanban'
-
-const tokenTeste = ref('')
-const modoDesenvolvimento = import.meta.env.DEV
+import { getAccessToken } from '@/services/shellAuth'
 
 const {
   loading,
@@ -16,34 +14,24 @@ const {
   loadTasks,
   addTask,
   moveTask,
-} = useKanban(() => tokenTeste.value)
+} = useKanban(() => getAccessToken())
+
+onMounted(() => {
+  if (getAccessToken()) {
+    loadTasks()
+  }
+})
 </script>
 
 <template>
   <section class="kanban">
     <h2 class="kanban__title">Kanban</h2>
 
+    <p v-if="loading">Carregando tarefas...</p>
 
-<div v-if="modoDesenvolvimento" class="kanban__teste">
-  <input
-    v-model="tokenTeste"
-    type="password"
-    autocomplete="off"
-    placeholder="JWT do aluno (teste local)"
-    aria-label="Token JWT para teste local"
-  />
-
-  <button type="button" @click="loadTasks">
-    Carregar tarefas
-  </button>
-</div>
-
-<p v-if="loading">Carregando tarefas...</p>
-
-<p v-if="error" role="alert">
-  {{ error }}
-</p>
-
+    <p v-if="error" role="alert">
+      {{ error }}
+    </p>
 
     <KanbanTaskForm @add="addTask" />
 
