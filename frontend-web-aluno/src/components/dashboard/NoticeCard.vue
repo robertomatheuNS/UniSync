@@ -12,7 +12,7 @@ defineProps({
     <header class="notice-card__header">
       <img :src="noticeIcon" alt="" class="notice-card__icon" />
       <h3 class="notice-card__type">{{ notice.type }}</h3>
-      <span class="notice-card__deadline">{{ formatDaysLeft(notice.daysLeft) }}</span>
+      <span class="notice-card__deadline">{{ notice.past ? 'Encerrada' : formatDaysLeft(notice.daysLeft) }}</span>
     </header>
 
     <div>
