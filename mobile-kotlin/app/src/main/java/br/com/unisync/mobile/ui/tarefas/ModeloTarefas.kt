@@ -45,12 +45,18 @@ class ModeloTarefas(private val sessao: SessaoAutenticada, private val repositor
         }
     }
 
-    fun salvar(id: String?, titulo: String, status: StatusTarefa) = escrever {
-        val validado = validarTituloTarefa(titulo)
-        if (id == null) repositorio.criar(sessao.usuarioId, sessao.token, validado)
-        else repositorio.editar(sessao.usuarioId, sessao.token, id, validado, status)
+    fun salvar(id: String?, dados: DadosTarefa) = escrever {
+        val validado = dados.validar()
+        if (id == null) repositorio.criar(sessao.usuarioId, sessao.token, validado.copy(status = StatusTarefa.A_FAZER))
+        else {
+            require(_estado.value.itens.any { it.id == id && it.alunoId == sessao.usuarioId }) { "Tarefa não encontrada nesta conta." }
+            repositorio.editar(sessao.usuarioId, sessao.token, id, validado)
+        }
     }
-    fun excluir(tarefa: Tarefa) = escrever { repositorio.excluir(sessao.usuarioId, sessao.token, tarefa.id) }
+    fun excluir(tarefa: Tarefa) = escrever {
+        require(tarefa.alunoId == sessao.usuarioId) { "Tarefa não pertence a esta conta." }
+        repositorio.excluir(sessao.usuarioId, sessao.token, tarefa.id)
+    }
 
     private fun escrever(acao: suspend () -> Unit) {
         if (_estado.value.salvando || _estado.value.atualizando) return

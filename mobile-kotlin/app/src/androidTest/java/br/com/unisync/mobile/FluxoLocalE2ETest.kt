@@ -5,6 +5,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import br.com.unisync.mobile.data.*
 import br.com.unisync.mobile.data.local.*
 import br.com.unisync.mobile.data.remote.ClienteAcademico
+import br.com.unisync.mobile.domain.tarefas.DadosTarefa
 import br.com.unisync.mobile.domain.tarefas.StatusTarefa
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -34,9 +35,9 @@ class FluxoLocalE2ETest {
             cofre.salvarToken(sessao.token)
             val restaurada = SessaoAutenticada.doToken(SessaoSegura(contexto, "sessao_e2e").lerToken()!!)
             assertEquals(sessao.usuarioId, restaurada.usuarioId)
-            tarefas.criar(restaurada.usuarioId, restaurada.token, "Tarefa E2E Android")
+            tarefas.criar(restaurada.usuarioId, restaurada.token, DadosTarefa("Tarefa E2E Android"))
             idCriada = tarefas.observar(restaurada.usuarioId).first().single().id
-            tarefas.editar(restaurada.usuarioId, restaurada.token, idCriada, "Tarefa revisada", StatusTarefa.EM_ANDAMENTO)
+            tarefas.editar(restaurada.usuarioId, restaurada.token, idCriada, DadosTarefa("Tarefa revisada", StatusTarefa.EM_ANDAMENTO))
             // Nova consulta à API comprova que a escrita saiu do cache local.
             tarefas.atualizar(restaurada.usuarioId, restaurada.token)
             val atualizada = tarefas.observar(restaurada.usuarioId).first().single()

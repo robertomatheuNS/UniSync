@@ -32,3 +32,6 @@
 # Resultados locais dos testes de navegador
 **/test-results/
 **/playwright-report/
+
+# Pacotes de distribuicao locais
+/UniSync.zip

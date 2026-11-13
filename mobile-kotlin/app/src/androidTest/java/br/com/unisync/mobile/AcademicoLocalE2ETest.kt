@@ -1,6 +1,11 @@
 package br.com.unisync.mobile
 
 import android.graphics.Bitmap
+import androidx.room.Room
+import br.com.unisync.mobile.data.local.BancoUniSync
+import br.com.unisync.mobile.domain.tarefas.*
+import kotlinx.coroutines.flow.first
+import java.time.LocalDate
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
@@ -47,6 +52,9 @@ class AcademicoLocalE2ETest {
         var filtro by mutableStateOf<String?>(null)
         var turmaId: String? = null
         var avisoId: String? = null
+        var tarefaId: String? = null
+        val banco = Room.inMemoryDatabaseBuilder(InstrumentationRegistry.getInstrumentation().targetContext, BancoUniSync::class.java).build()
+        val tarefas = RepositorioTarefas(banco.tarefas(), api)
         try {
             compose.setContent {
                 TemaUniSync {
@@ -86,6 +94,19 @@ class AcademicoLocalE2ETest {
             compose.onNodeWithText("Código da turma").performTextInput(turma.codigo!!)
             compose.onNodeWithText("Entrar na turma").performClick()
             compose.waitUntil(15000) { modeloAluno.estado.value.avisos.size == 1 && !modeloAluno.estado.value.atualizando }
+            runBlocking {
+                val dados = DadosTarefa("Entrega com prazo", prioridade = PrioridadeTarefa.ALTA,
+                    prazo = LocalDate.of(2028, 2, 29), turmaId = turma.id)
+                tarefas.criar(aluno.usuarioId, aluno.token, dados)
+                val criada = tarefas.observar(aluno.usuarioId).first().single()
+                tarefaId = criada.id
+                assertEquals(dados, criada.dados())
+                assertEquals(turma.disciplina, criada.disciplina)
+                // O Kanban Web envia apenas o status. Os campos novos devem sobreviver.
+                api.executar("PATCH", "/tarefas/atualizar/${criada.id}", aluno.token, """{"status":"EM_ANDAMENTO"}""")
+                tarefas.atualizar(aluno.usuarioId, aluno.token)
+                assertEquals(dados.copy(status = StatusTarefa.EM_ANDAMENTO), tarefas.observar(aluno.usuarioId).first().single().dados())
+            }
             compose.onNodeWithText("Ver avisos").performScrollTo().performClick()
             compose.onNodeWithText("Não lido").assertExists()
             compose.onNodeWithText("Entrega do projeto Android").performClick()
@@ -98,6 +119,9 @@ class AcademicoLocalE2ETest {
                 auth.cadastrar("Aluno sem matrícula", "fora-academico-$id@example.invalid", senha, null)
                 val fora = auth.entrar("fora-academico-$id@example.invalid", senha)
                 assertTrue(repo.carregar(fora.token).avisos.isEmpty())
+                assertEquals(403, (runCatching { api.executar("GET", "/tarefas/buscar/$tarefaId", fora.token) }.exceptionOrNull() as? FalhaApi)?.status)
+                assertEquals(403, (runCatching { api.executar("POST", "/tarefas/criar", fora.token,
+                    """{"titulo":"Sem matrícula","turma_id":"$turmaId"}""") }.exceptionOrNull() as? FalhaApi)?.status)
                 assertEquals(403, (runCatching { api.executar("GET", "/avisos/listar?turma_id=$turmaId", fora.token) }.exceptionOrNull() as? FalhaApi)?.status)
                 assertEquals(403, (runCatching { api.executar("PUT", "/avisos/ler/$avisoId", fora.token) }.exceptionOrNull() as? FalhaApi)?.status)
             }
@@ -122,13 +146,25 @@ class AcademicoLocalE2ETest {
             compose.waitUntil(15000) { modeloProfessor.estado.value.turmas.isEmpty() && !modeloProfessor.estado.value.salvando }
             turmaId = null
             assertTrue(runBlocking { repo.carregar(aluno.token).turmas.isEmpty() })
+            runBlocking {
+                val atual = tarefas.observar(aluno.usuarioId).first().single()
+                // Uma turma arquivada não impede editar a tarefa que já estava vinculada.
+                tarefas.editar(aluno.usuarioId, aluno.token, atual.id, atual.dados().copy(status = StatusTarefa.CONCLUIDO))
+                tarefas.editar(aluno.usuarioId, aluno.token, atual.id, atual.dados().copy(prazo = null, turmaId = null))
+                tarefas.atualizar(aluno.usuarioId, aluno.token)
+                val semVinculo = tarefas.observar(aluno.usuarioId).first().single()
+                assertNull(semVinculo.prazo); assertNull(semVinculo.turmaId); assertNull(semVinculo.disciplina)
+                assertEquals(PrioridadeTarefa.ALTA, semVinculo.prioridade)
+            }
             assertFalse(expirou)
         } finally {
             modeloProfessor.fechar(); modeloAluno.fechar()
             runBlocking {
+                tarefaId?.let { tarefas.excluir(aluno.usuarioId, aluno.token, it) }
                 avisoId?.let { repo.excluirAviso(professor.token, it) }
                 turmaId?.let { repo.arquivarTurma(professor.token, it) }
             }
+            banco.close()
         }
     }
 

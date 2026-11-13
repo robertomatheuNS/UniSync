@@ -11,7 +11,7 @@ import br.com.unisync.mobile.data.remote.ClienteAcademico
 
 class UniSyncApplication : Application() {
     val banco by lazy { Room.databaseBuilder(this, BancoUniSync::class.java, "unisync.db")
-        .addMigrations(BancoUniSync.MIGRACAO_1_2, BancoUniSync.MIGRACAO_2_3).build() }
+        .addMigrations(BancoUniSync.MIGRACAO_1_2, BancoUniSync.MIGRACAO_2_3, BancoUniSync.MIGRACAO_3_4).build() }
     val tarefas by lazy { RepositorioTarefas(banco.tarefas(), ClienteAcademico()) }
     val oportunidades by lazy { RepositorioOportunidades(banco.oportunidades(), ClienteAcademico()) }
     val academico by lazy { RepositorioAcademico() }

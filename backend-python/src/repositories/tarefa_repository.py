@@ -26,10 +26,8 @@ async def atualizar_tarefa(
     tarefa: Tarefa,
     novos_dados: dict,
 ) -> Tarefa:
-    for campo, valor in novos_dados.items():
-        setattr(tarefa, campo, valor)
-
-    await tarefa.save()
+    # PATCH altera somente os campos enviados, inclusive em clientes legados.
+    await tarefa.set(novos_dados)
     return tarefa
 
 

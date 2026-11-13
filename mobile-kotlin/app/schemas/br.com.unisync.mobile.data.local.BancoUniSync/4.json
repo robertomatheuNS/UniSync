@@ -1,0 +1,154 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 4,
+    "identityHash": "33317e12c9aa81d7429acb73ee69e853",
+    "entities": [
+      {
+        "tableName": "tarefas",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `alunoId` TEXT NOT NULL, `titulo` TEXT NOT NULL, `status` TEXT NOT NULL, `prioridade` TEXT NOT NULL DEFAULT 'MEDIA', `prazo` TEXT, `turmaId` TEXT, `disciplina` TEXT, PRIMARY KEY(`alunoId`, `id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alunoId",
+            "columnName": "alunoId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titulo",
+            "columnName": "titulo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prioridade",
+            "columnName": "prioridade",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'MEDIA'"
+          },
+          {
+            "fieldPath": "prazo",
+            "columnName": "prazo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "turmaId",
+            "columnName": "turmaId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "disciplina",
+            "columnName": "disciplina",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "alunoId",
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "sincronizacoes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`alunoId` TEXT NOT NULL, `atualizadoEm` INTEGER NOT NULL, PRIMARY KEY(`alunoId`))",
+        "fields": [
+          {
+            "fieldPath": "alunoId",
+            "columnName": "alunoId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atualizadoEm",
+            "columnName": "atualizadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "alunoId"
+          ]
+        }
+      },
+      {
+        "tableName": "oportunidades",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `titulo` TEXT NOT NULL, `professor` TEXT NOT NULL, `materia` TEXT NOT NULL, `descricao` TEXT, `tipo` TEXT NOT NULL, `dataEvento` TEXT NOT NULL, `professorId` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titulo",
+            "columnName": "titulo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "professor",
+            "columnName": "professor",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "materia",
+            "columnName": "materia",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descricao",
+            "columnName": "descricao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dataEvento",
+            "columnName": "dataEvento",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "professorId",
+            "columnName": "professorId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '33317e12c9aa81d7429acb73ee69e853')"
+    ]
+  }
+}

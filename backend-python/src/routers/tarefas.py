@@ -34,10 +34,10 @@ async def criar_tarefa(
     dados: TarefaCreate,
     usuario: UsuarioAutenticado = Depends(exigir_aluno),
 ):
-    return await tarefa_service.criar_tarefa(
-        dados,
-        usuario.id,
-    )
+    try:
+        return await tarefa_service.criar_tarefa(dados, usuario.id)
+    except PermissionError as erro:
+        raise HTTPException(status_code=403, detail=str(erro)) from erro
 
 
 @router.get(

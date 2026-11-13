@@ -249,3 +249,31 @@ def test_aluno_nao_exclui_tarefa_de_outro(cliente_aluno):
         tarefa_id,
         aluno.id,
     )
+
+
+def test_contrato_legado_responde_com_defaults(cliente_aluno):
+    client, aluno = cliente_aluno
+    with patch.object(tarefa_service, "criar_tarefa", AsyncMock(return_value=tarefa_falsa(aluno.id))):
+        resposta = client.post("/tarefas/criar", json={"titulo": "Legada"})
+    assert resposta.status_code == 201
+    assert resposta.json()["prioridade"] == "MEDIA"
+    assert resposta.json()["prazo"] is None
+    assert resposta.json()["turma_id"] is None
+
+
+def test_criar_tarefa_sem_matricula_retorna_403(cliente_aluno):
+    client, _ = cliente_aluno
+    with patch.object(tarefa_service, "criar_tarefa", AsyncMock(side_effect=PermissionError("Turma não permitida"))):
+        resposta = client.post("/tarefas/criar", json={"titulo": "Privada", "turma_id": str(PydanticObjectId())})
+    assert resposta.status_code == 403
+
+
+def test_resposta_preserva_prazo_sem_fuso_e_disciplina(cliente_aluno):
+    from datetime import date
+    client, aluno = cliente_aluno
+    tarefa = {**tarefa_falsa(aluno.id), "prazo": date(2028, 2, 29), "prioridade": "ALTA", "turma_id": PydanticObjectId(), "disciplina": "Kotlin"}
+    with patch.object(tarefa_service, "listar_tarefas", AsyncMock(return_value=[tarefa])):
+        resposta = client.get("/tarefas/listar")
+    assert resposta.status_code == 200
+    assert resposta.json()[0]["prazo"] == "2028-02-29"
+    assert resposta.json()[0]["disciplina"] == "Kotlin"
