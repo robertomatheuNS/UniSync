@@ -26,6 +26,9 @@ import br.com.unisync.mobile.ui.componentes.*
 import br.com.unisync.mobile.ui.tarefas.*
 import br.com.unisync.mobile.ui.oportunidades.*
 import br.com.unisync.mobile.ui.academico.*
+import br.com.unisync.mobile.ui.lembretes.*
+import br.com.unisync.mobile.ui.mural.*
+import br.com.unisync.mobile.notificacoes.*
 import kotlinx.coroutines.launch
 
 private data class Destino(val rota: String, val titulo: String, val rotulo: String = titulo)
@@ -33,7 +36,8 @@ private data class Destino(val rota: String, val titulo: String, val rotulo: Str
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modoTema: ModoTema,
-    aoExpirar: () -> Unit, aoSair: () -> Unit, mensagem: String?, carregando: Boolean) {
+    aoExpirar: () -> Unit, aoSair: () -> Unit, mensagem: String?, carregando: Boolean,
+    aberturaAlerta: AberturaAlerta? = null, aoConsumirAlerta: () -> Unit = {}) {
     val nav = rememberNavController()
     val destinos = remember(sessao.perfil) { if (sessao.perfil == PerfilUsuario.ALUNO)
         listOf(Destino("inicio", "Início"), Destino("calendario", "Calendário"), Destino("tarefas", "Tarefas"),
@@ -49,18 +53,27 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
         usuarioId = sessao.usuarioId, nomeProfessor = sessao.nome, professor = sessao.perfil == PerfilUsuario.PROFESSOR) }
     val oportunidades by modeloOportunidades.estado.collectAsStateWithLifecycle()
     DisposableEffect(modeloOportunidades) { onDispose { modeloOportunidades.fechar() } }
+    val modeloLembretes = remember(sessao.token) { ModeloLembretes(sessao, aplicacao.lembretes, aoExpirar) }
+    val lembretes by modeloLembretes.estado.collectAsStateWithLifecycle()
+    val opcoesAlertas by aplicacao.preferencias.alertas(sessao.usuarioId).collectAsStateWithLifecycle(initialValue = OpcoesAlertas())
+    DisposableEffect(modeloLembretes) { onDispose { modeloLembretes.fechar() } }
+    LaunchedEffect(sessao.token) { aplicacao.atualizarAlertas(ativar = true) }
+    val modeloMural = remember(sessao.token) { ModeloMural(aplicacao.mural, sessao.token, sessao.usuarioId, aoExpirar) }
+    val mural by modeloMural.estado.collectAsStateWithLifecycle()
+    DisposableEffect(modeloMural) { onDispose { modeloMural.fechar() } }
     val professor = sessao.perfil == PerfilUsuario.PROFESSOR
     val professorId = sessao.usuarioId.takeIf { professor }
     val modeloAcademico = remember(sessao.token) { ModeloAcademico(aplicacao.academico, sessao.token,
         sessao.usuarioId, professor, aoExpirar) }
     val academico by modeloAcademico.estado.collectAsStateWithLifecycle()
     DisposableEffect(modeloAcademico) { onDispose { modeloAcademico.fechar() } }
+    var lembreteAgenda by rememberSaveable { mutableStateOf<String?>(null) }
     var tarefaAgenda by rememberSaveable { mutableStateOf<String?>(null) }
     var filtroAvisos by rememberSaveable { mutableStateOf<String?>(null) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    DisposableEffect(lifecycle, modelo, modeloOportunidades, modeloAcademico) {
+    DisposableEffect(lifecycle, modelo, modeloOportunidades, modeloAcademico, modeloLembretes, modeloMural) {
         val observador = LifecycleEventObserver { _, evento -> if (evento == Lifecycle.Event.ON_START) {
-            modelo?.atualizar(); modeloOportunidades.atualizar(); modeloAcademico.atualizar()
+            modelo?.atualizar(); modeloOportunidades.atualizar(); modeloAcademico.atualizar(); modeloLembretes.atualizar(); modeloMural.atualizar()
         } }
         lifecycle.addObserver(observador)
         onDispose { lifecycle.removeObserver(observador) }
@@ -68,11 +81,25 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
     val estado = modelo?.estado?.collectAsStateWithLifecycle()?.value ?: EstadoTarefas(lendo = false)
     val escopo = rememberCoroutineScope()
     var erroPreferencia by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(rota) { if (rota == "turmas" || rota == "avisos") modeloAcademico.atualizar() }
+    var salvandoPreferencias by remember { mutableStateOf(false) }
+    LaunchedEffect(aberturaAlerta) {
+        aberturaAlerta?.let { abertura ->
+            if (abertura.usuarioId == sessao.usuarioId && abertura.destino in setOf("lembretes", "tarefas")) {
+                if (abertura.destino == "lembretes") lembreteAgenda = abertura.itemId else tarefaAgenda = abertura.itemId
+                nav.navigate(abertura.destino) {
+                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                }
+            }
+            aoConsumirAlerta()
+        }
+    }
+    LaunchedEffect(rota) { if (rota == "turmas" || rota == "avisos" || rota == "mural") modeloAcademico.atualizar()
+        if (rota == "mural" && !modeloMural.estado.value.atualizando) modeloMural.atualizar() }
     Scaffold(topBar = { TopAppBar(title = { Text(when (rota) {
-        "turmas" -> "Turmas"; "avisos" -> "Avisos"; else -> destinos.find { it.rota == rota }?.titulo ?: "UniSync"
+        "turmas" -> "Turmas"; "avisos" -> "Avisos"; "lembretes" -> "Lembretes"; "mural" -> "Mural"; "calendario" -> "Calendário"; else -> destinos.find { it.rota == rota }?.titulo ?: "UniSync"
     }) }, navigationIcon = {
-        if (!professor && (rota == "turmas" || rota == "avisos")) TextButton(onClick = { nav.popBackStack() }) { Text("Voltar") }
+        if (destinos.none { it.rota == rota }) TextButton(onClick = { nav.popBackStack() }) { Text("Voltar") }
     }) },
         bottomBar = { NavigationBar { destinos.forEachIndexed { indice, destino ->
             NavigationBarItem(selected = rota == destino.rota, onClick = {
@@ -96,6 +123,7 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { nav.navigate("turmas") }) { Text("Minhas turmas") }
                             OutlinedButton(onClick = { filtroAvisos = null; nav.navigate("avisos") }) { Text("Ver avisos") }
+                            OutlinedButton(onClick = { nav.navigate("mural") }) { Text("Abrir mural") }
                         }
                     } } }
                     if (modelo != null) {
@@ -112,6 +140,19 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                         } } }
                     }
                     item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Seus lembretes", style = MaterialTheme.typography.titleLarge)
+                        Text("${lembretes.itens.count { !it.concluido }} lembretes pendentes")
+                        if (lembretes.lendo) LinearProgressIndicator(Modifier.fillMaxWidth())
+                        lembretes.erro?.let { MensagemDeErro(it) }
+                        lembretes.itens.filter { !it.concluido && it.agendadoEm != null }.sortedBy { it.agendadoEm }.take(3).forEach { item ->
+                            TextButton(onClick = { lembreteAgenda = item.id; nav.navigate("lembretes") }) { Text("${item.horarioLocal()} • ${item.titulo}") }
+                        }
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Button(onClick = { nav.navigate("lembretes") }) { Text("Meus lembretes") }
+                            OutlinedButton(onClick = { nav.navigate("calendario") }) { Text("Ver agenda") }
+                        }
+                    } } }
+                    item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text("Oportunidades", style = MaterialTheme.typography.titleLarge)
                         Text("${oportunidades.itens.count { !it.encerrada() }} próximos eventos entre os itens carregados")
                         Button(onClick = { nav.navigate("oportunidades") }) { Text("Explorar oportunidades") }
@@ -122,11 +163,18 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
             composable("oportunidades") { TelaOportunidades(oportunidades, modeloOportunidades::atualizar,
                 professorId = sessao.usuarioId.takeIf { sessao.perfil == PerfilUsuario.PROFESSOR },
                 aoSalvar = modeloOportunidades::salvar, aoExcluir = modeloOportunidades::excluir) }
-            composable("calendario") { TelaCalendario(oportunidades, { modeloOportunidades.atualizar(); modelo?.atualizar() }, estado,
-                aoAbrirTarefa = { tarefa -> tarefaAgenda = tarefa.id; nav.navigate("tarefas") }) }
+            composable("calendario") { TelaCalendario(oportunidades, { modeloOportunidades.atualizar(); modelo?.atualizar(); modeloLembretes.atualizar() }, estado,
+                aoAbrirTarefa = { tarefa -> tarefaAgenda = tarefa.id; nav.navigate("tarefas") }, lembretes = lembretes,
+                aoAbrirLembrete = { item -> lembreteAgenda = item.id; nav.navigate("lembretes") }) }
+            composable("lembretes") { TelaLembretes(lembretes, modeloLembretes::atualizar, modeloLembretes::salvar,
+                modeloLembretes::concluir, modeloLembretes::excluir, { nav.navigate("perfil") }, lembreteAgenda, { lembreteAgenda = null }) }
+            composable("mural") { TelaMural(mural, academico.turmas, { modeloMural.atualizar() }, modeloMural::atualizar,
+                modeloMural::carregarMais, modeloMural::abrir, modeloMural::fecharDetalhe, modeloMural::salvar,
+                modeloMural::excluir, { nav.navigate("turmas") }) }
             composable("perfil") {
                 LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     item { Text(sessao.nome, style = MaterialTheme.typography.titleLarge); Text(sessao.perfil.name.lowercase().replaceFirstChar { it.uppercase() }) }
+                    item { OutlinedButton(onClick = { nav.navigate("mural") }) { Text("Mural das turmas") } }
                     item { Text("Aparência", style = MaterialTheme.typography.titleMedium) }
                     items(ModoTema.entries.size) { indice -> val modo = ModoTema.entries[indice]
                         FilterChip(selected = modo == modoTema, onClick = { escopo.launch {
@@ -135,14 +183,25 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                             catch (_: Exception) { erroPreferencia = "Não foi possível salvar a preferência. Tente novamente." }
                         } }, label = { Text(when(modo) { ModoTema.SISTEMA -> "Usar tema do sistema"; ModoTema.CLARO -> "Claro"; ModoTema.ESCURO -> "Escuro" }) })
                     }
+                    item { PreferenciasAlertas(opcoesAlertas, salvandoPreferencias,
+                        aoSalvar = { opcoes ->
+                            if (!salvandoPreferencias) escopo.launch {
+                                salvandoPreferencias = true
+                                try { aplicacao.preferencias.definirAlertas(sessao.usuarioId, opcoes); aplicacao.atualizarAlertas(); erroPreferencia = null }
+                                catch (erro: kotlinx.coroutines.CancellationException) { throw erro }
+                                catch (_: Exception) { erroPreferencia = "Não foi possível salvar as preferências de alertas. Tente novamente." }
+                                finally { salvandoPreferencias = false }
+                            }
+                        }, aoRevisar = { escopo.launch { aplicacao.atualizarAlertas() } }) }
                     erroPreferencia?.let { item { MensagemDeErro(it) } }
                     mensagem?.let { item { MensagemDeErro(it) } }
-                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando && !oportunidades.salvando && !oportunidades.atualizando && !academico.salvando && !academico.atualizando) { Text("Sair da conta") } }
+                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando && !oportunidades.salvando && !oportunidades.atualizando && !academico.salvando && !academico.atualizando && !lembretes.salvando && !lembretes.atualizando && !salvandoPreferencias && !mural.salvando) { Text("Sair da conta") } }
                 }
             }
             composable("turmas") { TelaTurmas(academico, professorId, modeloAcademico::atualizar,
                 modeloAcademico::salvarTurma, modeloAcademico::entrar, modeloAcademico::arquivar,
-                aoVerAvisos = { filtroAvisos = it; nav.navigate("avisos") }, aoLimparMensagem = modeloAcademico::limparMensagem) }
+                aoVerAvisos = { filtroAvisos = it; nav.navigate("avisos") }, aoLimparMensagem = modeloAcademico::limparMensagem,
+                aoVerMural = { modeloMural.fecharDetalhe(); modeloMural.atualizar(it); nav.navigate("mural") }) }
             composable("avisos") { TelaAvisos(academico, professorId, filtroAvisos, modeloAcademico::atualizar,
                 modeloAcademico::salvarAviso, modeloAcademico::excluirAviso, modeloAcademico::marcarLido,
                 aoAbrirTurmas = { nav.navigate("turmas") }, aoLimparMensagem = modeloAcademico::limparMensagem) }

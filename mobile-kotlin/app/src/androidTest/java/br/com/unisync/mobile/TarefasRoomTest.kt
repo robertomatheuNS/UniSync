@@ -19,7 +19,7 @@ class TarefasRoomTest {
             antigo.execSQL("INSERT INTO oportunidades VALUES ('id', 'Palestra legada', 'Ana', 'Kotlin', NULL, 'Palestra', '2027-01-10T14:30:00')")
             antigo.version = 2
         }
-        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_2_3, BancoUniSync.MIGRACAO_3_4).build()
+        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_2_3, BancoUniSync.MIGRACAO_3_4, BancoUniSync.MIGRACAO_4_5).build()
         try {
             val item = banco.oportunidades().observar().first().single()
             assertEquals("Palestra legada", item.titulo); assertNull(item.professorId)
@@ -36,7 +36,7 @@ class TarefasRoomTest {
             antigo.version = 1
         }
         val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome)
-            .addMigrations(BancoUniSync.MIGRACAO_1_2, BancoUniSync.MIGRACAO_2_3, BancoUniSync.MIGRACAO_3_4).build()
+            .addMigrations(BancoUniSync.MIGRACAO_1_2, BancoUniSync.MIGRACAO_2_3, BancoUniSync.MIGRACAO_3_4, BancoUniSync.MIGRACAO_4_5).build()
         try {
             val tarefa = banco.tarefas().observar("aluno").first().single()
             assertEquals("Tarefa preservada", tarefa.titulo)
@@ -56,7 +56,7 @@ class TarefasRoomTest {
             antigo.execSQL("INSERT INTO sincronizacoes VALUES ('aluno', 123)")
             antigo.version = 3
         }
-        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_3_4).build()
+        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_3_4, BancoUniSync.MIGRACAO_4_5).build()
         try {
             val tarefa = banco.tarefas().observar("aluno").first().single()
             assertEquals("EM_ANDAMENTO", tarefa.status); assertEquals("MEDIA", tarefa.prioridade)
