@@ -69,6 +69,11 @@ services:
 
   frontend-shell:
     build: ./frontend-shell
+    volumes:
+      - ./frontend-shell/authentication:/app/authentication:ro
+      - ./frontend-shell/config:/app/config:ro
+      - ./frontend-shell/templates:/app/templates:ro
+      - ./frontend-shell/static:/app/static:ro
     environment:
       API_BASE_URL: http://api-dotnet:8080
       AUTH_MOCK: "false"
@@ -80,8 +85,14 @@ services:
 
   frontend-web:
     build: ./frontend-web-aluno
+    volumes:
+      - ./frontend-web-aluno/src:/app/src:ro
+      - ./frontend-web-aluno/public:/app/public:ro
+      - ./frontend-web-aluno/index.html:/app/index.html:ro
+      - ./frontend-web-aluno/vite.config.js:/app/vite.config.js:ro
     environment:
       VITE_PYTHON_API_URL: http://localhost:8000
+      VITE_USE_POLLING: "true"
     ports:
       - "127.0.0.1:5173:5173"
     depends_on:
