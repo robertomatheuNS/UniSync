@@ -32,3 +32,9 @@ select {
 .botao--perigo { color: var(--color-error); border-color: currentColor; }
 button:disabled { cursor: wait; opacity: .6; }
 :focus-visible { outline: 3px solid var(--color-highlight); outline-offset: 3px; }
+
+.lista-enter-active,.lista-leave-active,.lista-move {transition:opacity .18s,transform .18s}
+.lista-enter-from,.lista-leave-to {opacity:0;transform:translateY(8px)}
+.botao {transition:background .15s,transform .15s}
+.botao:hover:not(:disabled) {transform:translateY(-1px)}
+@media(prefers-reduced-motion:reduce) {*,*::before,*::after {animation:none!important;transition:none!important;scroll-behavior:auto!important}}

@@ -86,27 +86,11 @@ class RegisterForm(forms.Form):
     def __init__(self, *args, tipo_usuario="aluno", **kwargs):
         super().__init__(*args, **kwargs)
         self.tipo_usuario = tipo_usuario
+        self.fields["codigo_professor"].required = tipo_usuario == "professor"
+        self.fields["codigo_professor"].error_messages["required"] = "O código do professor é obrigatório."
 
     def clean_nome(self):
         return " ".join(self.cleaned_data["nome"].split())
 
     def clean_email(self):
         return self.cleaned_data["email"].strip().lower()
-
-    def clean(self):
-        cleaned_data = super().clean()
-
-        codigo_professor = cleaned_data.get(
-            "codigo_professor",
-            "",
-        ).strip()
-
-        if self.tipo_usuario == "professor" and not codigo_professor:
-            self.add_error(
-                "codigo_professor",
-                "O código do professor é obrigatório.",
-            )
-
-        cleaned_data["codigo_professor"] = codigo_professor
-
-        return cleaned_data

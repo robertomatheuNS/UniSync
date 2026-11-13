@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 from src.routers import oportunidades
 from fastapi import FastAPI
 from src.routers import tarefas
+from src.routers import lembretes
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.database.connection import (
@@ -30,6 +31,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:8081",
+        "http://127.0.0.1:8081",
     ],
     allow_credentials=False,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
@@ -38,6 +41,7 @@ app.add_middleware(
 
 app.include_router(oportunidades.router)
 app.include_router(tarefas.router)
+app.include_router(lembretes.router)
 
 @app.get("/health", tags=["Health"])
 async def health_check():
