@@ -3,7 +3,7 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppCalendar from '@/components/layout/AppCalendar.vue'
 import RemindersPanel from '@/components/layout/RemindersPanel.vue'
-import PromoBanner from '@/components/layout/PromoBanner.vue'
+import BannerCarousel from '@/components/layout/BannerCarousel.vue'
 import { ref } from 'vue'
 
 const isSidebarCollapsed = ref(false)
@@ -15,7 +15,7 @@ const isSidebarCollapsed = ref(false)
   <AppSidebar v-model:collapsed="isSidebarCollapsed" class="app-layout__sidebar" />
 
     <main class="app-layout__content">
-      <PromoBanner />
+      <BannerCarousel />
       <RouterView />
     </main>
 

@@ -1,26 +1,26 @@
 <script setup>
-import bannerImage from '@/assets/images/focus-banner.jpg'
+defineProps({
+  slide: { type: Object, required: true },
+})
 </script>
 
 <template>
-  <section
-    class="promo-banner"
-    :style="{ backgroundImage: `url(${bannerImage})` }"
-    aria-label="Destaque"
-  >
+  <article class="promo-banner" :style="{ backgroundImage: `url(${slide.image})` }">
     <h2 class="promo-banner__title">
-      <span class="promo-banner__accent">Semana</span> De Foco
+      <span class="promo-banner__accent">{{ slide.accent }}</span>
+      {{ slide.title }}
     </h2>
     <p class="promo-banner__subtitle">
-      Dicas de estudos
-      <button type="button" class="promo-banner__cta">AQUI</button>
+      {{ slide.subtitle }}
+      <!-- TODO: levar o botão para a página de destino quando ela existir -->
+      <button type="button" class="promo-banner__cta">{{ slide.ctaLabel }}</button>
     </p>
-  </section>
+  </article>
 </template>
 
 <style scoped>
 .promo-banner {
-  min-height: 9rem;
+  min-height: var(--banner-height);
   padding: var(--space-md) var(--space-lg);
   display: flex;
   flex-direction: column;

@@ -1,6 +1,5 @@
 <script setup>
-import { authUrl } from '@/utils/authUrl'
-import logo from '@/assets/images/logo.svg'
+import logo from '@/assets/images/logo.gif'
 import avatar from '@/assets/images/avatar.jpg'
 import bellIcon from '@/assets/icons/bell.svg'
 import ThemeToggle from '@/components/layout/ThemeToggle.vue'
