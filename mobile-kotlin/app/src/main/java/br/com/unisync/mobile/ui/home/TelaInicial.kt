@@ -33,32 +33,32 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import br.com.unisync.mobile.R
-import br.com.unisync.mobile.ui.theme.UniSyncTheme
+import br.com.unisync.mobile.ui.theme.TemaUniSync
 
-private val LandingBackground = Brush.verticalGradient(
+private val FundoInicial = Brush.verticalGradient(
     0f to Color.White,
     0.58f to Color(0xFFE9FBFF),
     1f to Color(0xFF315CFF)
 )
 
 @Composable
-fun HomeScreen(
-    onLogin: () -> Unit,
-    onRegister: () -> Unit,
-    modifier: Modifier = Modifier
+fun TelaInicial(
+    aoEntrar: () -> Unit,
+    aoCadastrar: () -> Unit,
+    modificador: Modifier = Modifier
 ) {
     BoxWithConstraints(
-        modifier = modifier
+        modifier = modificador
             .fillMaxSize()
-            .background(LandingBackground)
+            .background(FundoInicial)
             .safeDrawingPadding()
     ) {
-        val viewportHeight = maxHeight
+        val alturaDisponivel = maxHeight
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
-                .heightIn(min = viewportHeight)
+                .heightIn(min = alturaDisponivel)
                 .padding(24.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
@@ -75,15 +75,15 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    HomeButton(
-                        text = stringResource(R.string.home_login),
-                        onClick = onLogin,
-                        modifier = Modifier.weight(1f)
+                    BotaoInicial(
+                        texto = stringResource(R.string.home_login),
+                        aoClicar = aoEntrar,
+                        modificador = Modifier.weight(1f)
                     )
-                    HomeButton(
-                        text = stringResource(R.string.home_register),
-                        onClick = onRegister,
-                        modifier = Modifier.weight(1f)
+                    BotaoInicial(
+                        texto = stringResource(R.string.home_register),
+                        aoClicar = aoCadastrar,
+                        modificador = Modifier.weight(1f)
                     )
                 }
             }
@@ -124,22 +124,22 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun BotaoInicial(texto: String, aoClicar: () -> Unit, modificador: Modifier = Modifier) {
     Button(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = 48.dp),
+        onClick = aoClicar,
+        modifier = modificador.heightIn(min = 48.dp),
         colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)
     ) {
-        Text(text = text, fontWeight = FontWeight.SemiBold)
+        Text(text = texto, fontWeight = FontWeight.SemiBold)
     }
 }
 
 @Preview(showBackground = true, widthDp = 360, heightDp = 800)
 @Preview(showBackground = true, widthDp = 640, heightDp = 360)
 @Composable
-private fun HomeScreenPreview() {
-    UniSyncTheme {
-        HomeScreen(onLogin = {}, onRegister = {})
+private fun PreviaTelaInicial() {
+    TemaUniSync {
+        TelaInicial(aoEntrar = {}, aoCadastrar = {})
     }
 }

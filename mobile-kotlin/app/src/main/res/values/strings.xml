@@ -27,7 +27,13 @@
     <string name="auth_new_account">Ainda não possui cadastro? Cadastre-se</string>
     <string name="auth_connection_error">Não foi possível conectar ao serviço. Confira a conexão e tente novamente.</string>
     <string name="auth_registered">Cadastro realizado</string>
-    <string name="auth_logged_in">Login realizado</string>
     <string name="auth_login_next">Entre com seu e-mail e senha para continuar.</string>
-    <string name="auth_dashboard_pending">Autenticação confirmada. A área interna do aplicativo será implementada na próxima etapa.</string>
+    <string name="auth_invalid_response">O servidor retornou uma resposta de autenticação inválida.</string>
+    <string name="painel_aluno">Painel do aluno</string>
+    <string name="painel_professor">Painel do professor</string>
+    <string name="painel_saudacao">Olá, %1$s</string>
+    <string name="painel_sair">Sair</string>
+    <string name="painel_proximos_avisos">Próximos avisos</string>
+    <string name="painel_avisos_turma">Avisos da turma</string>
+    <string name="painel_avisos_pendentes">A integração de avisos está pendente no aplicativo.</string>
 </resources>

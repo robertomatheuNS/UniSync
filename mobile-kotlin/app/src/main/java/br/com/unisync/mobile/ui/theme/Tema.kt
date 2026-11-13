@@ -11,16 +11,16 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+private val CoresEscuras = darkColorScheme(
+    primary = Roxo80,
+    secondary = CinzaRoxo80,
+    tertiary = Rosa80
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+private val CoresClaras = lightColorScheme(
+    primary = Roxo40,
+    secondary = CinzaRoxo40,
+    tertiary = Rosa40
 
     /* Other default colors to override
     background = Color(0xFFFFFBFE),
@@ -34,25 +34,25 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun UniSyncTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+fun TemaUniSync(
+    temaEscuro: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+    corDinamica: Boolean = true,
+    conteudo: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    val esquemaCores = when {
+        corDinamica && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            val contexto = LocalContext.current
+            if (temaEscuro) dynamicDarkColorScheme(contexto) else dynamicLightColorScheme(contexto)
         }
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        temaEscuro -> CoresEscuras
+        else -> CoresClaras
     }
 
     MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+        colorScheme = esquemaCores,
+        typography = Tipografia,
+        content = conteudo
     )
 }
