@@ -19,12 +19,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -35,22 +35,18 @@ import androidx.compose.ui.unit.sp
 import br.com.unisync.mobile.R
 import br.com.unisync.mobile.ui.theme.TemaUniSync
 
-private val FundoInicial = Brush.verticalGradient(
-    0f to Color.White,
-    0.58f to Color(0xFFE9FBFF),
-    1f to Color(0xFF315CFF)
-)
-
 @Composable
 fun TelaInicial(
     aoEntrar: () -> Unit,
     aoCadastrar: () -> Unit,
     modificador: Modifier = Modifier
 ) {
+    val cores = MaterialTheme.colorScheme
+    val fundoInicial = Brush.verticalGradient(listOf(cores.surface, cores.secondaryContainer, cores.primaryContainer))
     BoxWithConstraints(
         modifier = modificador
             .fillMaxSize()
-            .background(FundoInicial)
+            .background(fundoInicial)
             .safeDrawingPadding()
     ) {
         val alturaDisponivel = maxHeight
@@ -65,7 +61,7 @@ fun TelaInicial(
             Column(verticalArrangement = Arrangement.spacedBy(28.dp)) {
                 Text(
                     text = stringResource(R.string.home_title),
-                    color = Color.Black,
+                    color = cores.onSurface,
                     fontSize = 56.sp,
                     lineHeight = 56.sp,
                     fontWeight = FontWeight.Medium,
@@ -112,7 +108,7 @@ fun TelaInicial(
                 }
                 Text(
                     text = stringResource(R.string.home_brand),
-                    color = Color.Black,
+                    color = cores.onPrimaryContainer,
                     fontSize = 40.sp,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 1.sp,
@@ -128,7 +124,6 @@ private fun BotaoInicial(texto: String, aoClicar: () -> Unit, modificador: Modif
     Button(
         onClick = aoClicar,
         modifier = modificador.heightIn(min = 48.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color.Black, contentColor = Color.White),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp)
     ) {
         Text(text = texto, fontWeight = FontWeight.SemiBold)

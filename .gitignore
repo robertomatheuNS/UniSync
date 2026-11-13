@@ -22,3 +22,9 @@
 
 # Sistema
 .DS_Store
+
+# Agentes e documentos locais do projeto mobile
+/mobile-kotlin/.agents/
+/docs/.agents/
+/docs/UniSync-Mobile-System-Design.docx
+/docs/PLANO-ENGENHARIA-SOFTWARE-MOBILE-KOTLIN.md
