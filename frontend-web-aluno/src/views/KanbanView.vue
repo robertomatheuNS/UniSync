@@ -1,8 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 
-import KanbanColumn from '@/components/kanban/KanbanColumn.vue'
-import KanbanTaskForm from '@/components/kanban/KanbanTaskForm.vue'
+import KanbanColumn from '@/components/kanban/kanbanColumn.vue'
+import KanbanTaskForm from '@/components/kanban/kanbanTaskForm.vue'
 import { KANBAN_COLUMNS } from '@/constants/kanban'
 import { useKanban } from '@/composables/useKanban'
 

@@ -16,3 +16,12 @@ button {
   font: inherit;
   cursor: pointer;
 }
+
+input,
+select {
+  color: var(--color-text);
+}
+
+.icon {
+  filter: var(--icon-filter);
+}

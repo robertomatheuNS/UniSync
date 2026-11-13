@@ -4,12 +4,15 @@ import AppSidebar from '@/components/layout/AppSidebar.vue'
 import AppCalendar from '@/components/layout/AppCalendar.vue'
 import RemindersPanel from '@/components/layout/RemindersPanel.vue'
 import PromoBanner from '@/components/layout/PromoBanner.vue'
+import { ref } from 'vue'
+
+const isSidebarCollapsed = ref(false)
 </script>
 
 <template>
-  <div class="app-layout">
-    <AppHeader class="app-layout__header" />
-    <AppSidebar class="app-layout__sidebar" />
+  <div class="app-layout" :class="{ 'app-layout--collapsed': isSidebarCollapsed }">
+  <AppHeader class="app-layout__header" />
+  <AppSidebar v-model:collapsed="isSidebarCollapsed" class="app-layout__sidebar" />
 
     <main class="app-layout__content">
       <PromoBanner />
@@ -41,6 +44,7 @@ import PromoBanner from '@/components/layout/PromoBanner.vue'
 
 .app-layout__sidebar {
   grid-area: sidebar;
+  margin-bottom: var(--space-md);
 }
 
 .app-layout__content {
@@ -72,5 +76,8 @@ import PromoBanner from '@/components/layout/PromoBanner.vue'
   .app-layout__aside {
     padding: 0 var(--space-md);
   }
+}
+.app-layout--collapsed {
+  --sidebar-width: 5rem;
 }
 </style>

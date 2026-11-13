@@ -76,4 +76,42 @@ function isSunday(index) {
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
+
+.calendar {
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--color-calendar);
+}
+
+.calendar__month {
+  margin-bottom: var(--space-sm);
+  font-size: 1rem;
+  text-align: center;
+}
+
+.calendar__month::first-letter {
+  text-transform: uppercase;
+}
+
+.calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.6rem 0.25rem;
+  text-align: center;
+  color: var(--color-highlight);
+}
+
+.calendar__weekday {
+  font-weight: 700;
+}
+
+.calendar__sunday {
+  color: var(--color-error);
+}
+
+.calendar__day--today {
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
 </style>
