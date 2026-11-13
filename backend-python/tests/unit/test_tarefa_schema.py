@@ -48,3 +48,25 @@ def test_atualizar_titulo_nulo():
 def test_atualizar_status_nulo():
     with pytest.raises(ValidationError):
         TarefaUpdate(status=None)
+
+
+@pytest.mark.parametrize("valor", ["   ", "\t\n"])
+def test_titulo_apenas_espacos_rejeitado(valor):
+    with pytest.raises(ValidationError):
+        TarefaCreate(titulo=valor)
+    with pytest.raises(ValidationError):
+        TarefaUpdate(titulo=valor)
+
+
+def test_campos_opcionais_e_limpeza_explicita():
+    dados = TarefaCreate(titulo="  Estudar  ", prioridade="ALTA", prazo="2028-02-29")
+    assert dados.titulo == "Estudar"
+    assert dados.prazo.isoformat() == "2028-02-29"
+    assert TarefaUpdate(prazo=None, turma_id=None).model_dump(exclude_unset=True) == {"prazo": None, "turma_id": None}
+    assert TarefaUpdate(status="CONCLUIDO").model_dump(exclude_unset=True) == {"status": "CONCLUIDO"}
+
+
+@pytest.mark.parametrize("campo,valor", [("prazo", "2027-02-29"), ("prioridade", None), ("prioridade", "URGENTE"), ("turma_id", "invalido"), ("disciplina", "forjada")])
+def test_metadados_invalidos_rejeitados(campo, valor):
+    with pytest.raises(ValidationError):
+        TarefaUpdate(**{campo: valor})

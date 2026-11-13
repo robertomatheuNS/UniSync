@@ -116,23 +116,32 @@ private fun DetalheOportunidade(item: Oportunidade, podeEditar: Boolean = false,
 }
 
 @Composable
-fun TelaCalendario(estado: EstadoOportunidades, aoAtualizar: () -> Unit) {
+fun TelaCalendario(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
+    tarefas: br.com.unisync.mobile.ui.tarefas.EstadoTarefas? = null,
+    aoAbrirTarefa: (br.com.unisync.mobile.domain.tarefas.Tarefa) -> Unit = {}) {
     var mes by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
     var modo by rememberSaveable { mutableStateOf("Mês") }
     var dia by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
     var detalhe by rememberSaveable { mutableStateOf<String?>(null) }
     val selecionado = LocalDate.parse(dia)
     val periodo = YearMonth.parse(mes)
-    val eventos = estado.itens.mapNotNull { item -> item.horario()?.let { it.toLocalDate() to item } }
-        .filter { (data, _) -> when (modo) {
-            "Dia" -> data == selecionado
-            "Semana" -> { val inicio = selecionado.minusDays(selecionado.dayOfWeek.value.toLong() - 1); data >= inicio && data < inicio.plusDays(7) }
-            else -> YearMonth.from(data) == periodo
-        } }.sortedBy { it.first }
+    fun noPeriodo(data: LocalDate) = when (modo) {
+        "Dia" -> data == selecionado
+        "Semana" -> { val inicio = selecionado.minusDays(selecionado.dayOfWeek.value.toLong() - 1)
+            data >= inicio && data < inicio.plusDays(7) }
+        else -> YearMonth.from(data) == periodo
+    }
+    val eventos = estado.itens.filter { it.horario()?.toLocalDate()?.let(::noPeriodo) == true }.sortedBy { it.horario() }
+    val prazos = tarefas?.itens.orEmpty().filter { it.prazo?.let(::noPeriodo) == true }
+    val datas = (eventos.mapNotNull { it.horario()?.toLocalDate() } + prazos.mapNotNull { it.prazo }).distinct().sorted()
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { CabecalhoOportunidades(estado, aoAtualizar) }
-        item { Text("Agenda dos eventos publicados", style = MaterialTheme.typography.titleLarge)
-            Text("Consulte as datas dos eventos publicados.", style = MaterialTheme.typography.bodyMedium) }
+        item { Text(if (tarefas == null) "Agenda dos eventos publicados" else "Sua agenda acadêmica", style = MaterialTheme.typography.titleLarge)
+            Text(if (tarefas == null) "Consulte as datas dos eventos publicados." else "Prazos das tarefas e eventos publicados, em um só lugar.", style = MaterialTheme.typography.bodyMedium) }
+        tarefas?.let { estadoTarefas ->
+            item { br.com.unisync.mobile.ui.tarefas.StatusSincronizacao(estadoTarefas) }
+            estadoTarefas.erro?.let { mensagem -> item { MensagemDeErro(mensagem) } }
+        }
         item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Mês", "Semana", "Dia").forEach { opcao -> FilterChip(selected = modo == opcao,
                 onClick = { modo = opcao }, label = { Text(opcao) }) }
@@ -152,8 +161,22 @@ fun TelaCalendario(estado: EstadoOportunidades, aoAtualizar: () -> Unit) {
                 }
             }
         }
-        if (eventos.isEmpty() && !estado.lendo) item { ConteudoVazio("Nenhum evento neste período", "Selecione outro período ou atualize as oportunidades.") }
-        items(eventos, key = { it.second.id }) { (_, item) -> CartaoOportunidade(item) { detalhe = item.id } }
+        if (datas.isEmpty() && !estado.lendo && tarefas?.lendo != true) item {
+            ConteudoVazio("Nenhum compromisso neste período", "Tarefas com prazo e eventos aparecem aqui. Selecione outro período ou atualize.")
+        }
+        items(datas, key = { it.toString() }) { data ->
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(data.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")), style = MaterialTheme.typography.titleMedium)
+                prazos.filter { it.prazo == data }.sortedByDescending { it.prioridade.ordinal }.forEach { tarefa ->
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(tarefa.titulo, style = MaterialTheme.typography.titleMedium)
+                        br.com.unisync.mobile.ui.tarefas.ResumoTarefa(tarefa)
+                        TextButton(onClick = { aoAbrirTarefa(tarefa) }) { Text("Abrir tarefa") }
+                    } }
+                }
+                eventos.filter { it.horario()?.toLocalDate() == data }.forEach { item -> CartaoOportunidade(item) { detalhe = item.id } }
+            }
+        }
     }
     estado.itens.find { it.id == detalhe }?.let { DetalheOportunidade(it) { detalhe = null } }
 }

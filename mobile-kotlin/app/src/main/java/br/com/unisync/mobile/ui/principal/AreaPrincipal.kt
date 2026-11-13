@@ -21,7 +21,7 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import br.com.unisync.mobile.UniSyncApplication
 import br.com.unisync.mobile.data.*
 import br.com.unisync.mobile.data.local.ModoTema
-import br.com.unisync.mobile.domain.tarefas.StatusTarefa
+import br.com.unisync.mobile.domain.tarefas.*
 import br.com.unisync.mobile.ui.componentes.*
 import br.com.unisync.mobile.ui.tarefas.*
 import br.com.unisync.mobile.ui.oportunidades.*
@@ -55,6 +55,7 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
         sessao.usuarioId, professor, aoExpirar) }
     val academico by modeloAcademico.estado.collectAsStateWithLifecycle()
     DisposableEffect(modeloAcademico) { onDispose { modeloAcademico.fechar() } }
+    var tarefaAgenda by rememberSaveable { mutableStateOf<String?>(null) }
     var filtroAvisos by rememberSaveable { mutableStateOf<String?>(null) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, modelo, modeloOportunidades, modeloAcademico) {
@@ -103,6 +104,9 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                         item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             Text("Suas tarefas", style = MaterialTheme.typography.titleLarge)
                             StatusTarefa.entries.forEach { status -> Text("${status.rotulo}: ${estado.itens.count { it.status == status }}") }
+                            Text("${estado.itens.count { it.atrasada() }} tarefas atrasadas")
+                            val proximas = estado.itens.filter { it.status != StatusTarefa.CONCLUIDO && it.prazo != null }.ordenadas().take(3)
+                            proximas.forEach { tarefa -> Text("${tarefa.prazo?.format(formatoPrazo)} • ${tarefa.titulo}") }
                             Button(onClick = { nav.navigate("tarefas") }) { Text("Organizar tarefas") }
                             TextButton(onClick = modelo::atualizar, enabled = !estado.atualizando) { Text("Atualizar") }
                         } } }
@@ -114,11 +118,12 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                     } } }
                 }
             }
-            composable("tarefas") { modelo?.let { TelaTarefas(estado, it::atualizar, it::salvar, it::excluir) } }
+            composable("tarefas") { modelo?.let { TelaTarefas(estado, it::atualizar, it::salvar, it::excluir, academico.turmas, tarefaAgenda, { tarefaAgenda = null }) } }
             composable("oportunidades") { TelaOportunidades(oportunidades, modeloOportunidades::atualizar,
                 professorId = sessao.usuarioId.takeIf { sessao.perfil == PerfilUsuario.PROFESSOR },
                 aoSalvar = modeloOportunidades::salvar, aoExcluir = modeloOportunidades::excluir) }
-            composable("calendario") { TelaCalendario(oportunidades, modeloOportunidades::atualizar) }
+            composable("calendario") { TelaCalendario(oportunidades, { modeloOportunidades.atualizar(); modelo?.atualizar() }, estado,
+                aoAbrirTarefa = { tarefa -> tarefaAgenda = tarefa.id; nav.navigate("tarefas") }) }
             composable("perfil") {
                 LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     item { Text(sessao.nome, style = MaterialTheme.typography.titleLarge); Text(sessao.perfil.name.lowercase().replaceFirstChar { it.uppercase() }) }

@@ -13,6 +13,8 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 import java.time.LocalDateTime
+import br.com.unisync.mobile.domain.tarefas.*
+import br.com.unisync.mobile.ui.tarefas.EstadoTarefas
 
 class OportunidadesUiTest {
     @get:Rule val compose = createComposeRule()
@@ -26,6 +28,21 @@ class OportunidadesUiTest {
         compose.onNodeWithText("Conferência Android").performScrollTo().performClick()
         compose.onNodeWithText("Desenvolvimento de aplicativos Android.").assertExists()
         compose.onNodeWithText("Fechar").performClick()
+    }
+    @Test fun agendaIncluiPrazosEAbreTarefaSelecionada() {
+        val tarefa = Tarefa("prazo", "aluno", "Entrega do projeto", StatusTarefa.A_FAZER,
+            PrioridadeTarefa.ALTA, java.time.LocalDate.now(), disciplina = "Kotlin")
+        var aberta: Tarefa? = null
+        compose.setContent { TemaUniSync { Surface {
+            TelaCalendario(EstadoOportunidades(listOf(evento), lendo = false), {}, EstadoTarefas(listOf(tarefa), lendo = false), { aberta = it })
+        } } }
+        compose.onNodeWithText("Entrega do projeto").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Abrir tarefa").performScrollTo().performClick()
+        compose.runOnIdle { org.junit.Assert.assertEquals(tarefa, aberta) }
+        compose.onNodeWithText("Dia").performScrollTo().performClick()
+        compose.onNodeWithText("Entrega do projeto").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Próximo").performScrollTo().performClick()
+        compose.onNodeWithText("Entrega do projeto").assertDoesNotExist()
     }
     @Test fun calendarioMostraEventoNoPeriodoAtual() {
         compose.setContent { TemaUniSync { Surface {

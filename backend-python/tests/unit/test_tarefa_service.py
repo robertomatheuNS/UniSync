@@ -156,3 +156,45 @@ async def test_excluir_tarefa_de_outro_aluno():
                 PydanticObjectId(),
                 outro_aluno,
             )
+
+
+@pytest.mark.asyncio
+async def test_criar_com_turma_usa_disciplina_do_servidor():
+    from types import SimpleNamespace
+    aluno_id = uuid4()
+    turma_id = PydanticObjectId()
+    turma = SimpleNamespace(alunos=[str(aluno_id)], disciplina="Matemática")
+    with (
+        patch.object(tarefa_service.academico_repository, "buscar_turma", AsyncMock(return_value=turma)),
+        patch.object(tarefa_service.tarefa_repository, "criar_tarefa", AsyncMock(side_effect=lambda tarefa: tarefa)),
+    ):
+        tarefa = await tarefa_service.criar_tarefa(TarefaCreate(titulo="Prova", prazo="2027-01-10", prioridade="ALTA", turma_id=turma_id), aluno_id)
+    assert tarefa.disciplina == "Matemática"
+    assert tarefa.turma_id == turma_id
+    assert tarefa.prazo.isoformat() == "2027-01-10"
+    assert tarefa.prioridade == "ALTA"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("turma", [None, type("TurmaFora", (), {"alunos": [], "disciplina": "Privada"})()])
+async def test_rejeita_turma_arquivada_ou_sem_matricula(turma):
+    with patch.object(tarefa_service.academico_repository, "buscar_turma", AsyncMock(return_value=turma)):
+        with pytest.raises(PermissionError):
+            await tarefa_service.criar_tarefa(TarefaCreate(titulo="Privada", turma_id=PydanticObjectId()), uuid4())
+
+
+@pytest.mark.asyncio
+async def test_patch_legado_preserva_metadados_e_limpa_vinculo_explicito():
+    aluno_id, turma_id = uuid4(), PydanticObjectId()
+    tarefa = Tarefa(aluno_id=aluno_id, titulo="Revisão", prazo="2027-01-10", prioridade="ALTA", turma_id=turma_id, disciplina="Kotlin")
+    with (
+        patch.object(tarefa_service.tarefa_repository, "buscar_tarefa_por_id", AsyncMock(return_value=tarefa)),
+        patch.object(tarefa_service.tarefa_repository, "atualizar_tarefa", AsyncMock(return_value=tarefa)) as atualizar,
+        patch.object(tarefa_service.academico_repository, "buscar_turma", AsyncMock()) as buscar_turma,
+    ):
+        await tarefa_service.atualizar_tarefa(PydanticObjectId(), TarefaUpdate(status="CONCLUIDO"), aluno_id)
+        atualizar.assert_awaited_with(tarefa, {"status": StatusTarefa.CONCLUIDO})
+        await tarefa_service.atualizar_tarefa(PydanticObjectId(), TarefaUpdate(turma_id=turma_id), aluno_id)
+        buscar_turma.assert_not_awaited()  # Preserva o vínculo inclusive após a turma ser arquivada.
+        await tarefa_service.atualizar_tarefa(PydanticObjectId(), TarefaUpdate(turma_id=None, prazo=None), aluno_id)
+        atualizar.assert_awaited_with(tarefa, {"turma_id": None, "prazo": None, "disciplina": None})

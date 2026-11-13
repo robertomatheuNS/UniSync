@@ -5,17 +5,15 @@ from beanie import PydanticObjectId
 
 from src.models.tarefa import Tarefa
 from src.schemas.tarefa import TarefaCreate, TarefaUpdate
-from src.repositories import tarefa_repository
+from src.repositories import tarefa_repository, academico_repository
 
 
 async def criar_tarefa(
     dados: TarefaCreate,
     aluno_id: UUID,
 ) -> Tarefa:
-    tarefa = Tarefa(
-        aluno_id=aluno_id,
-        titulo=dados.titulo,
-    )
+    disciplina = await disciplina_da_turma(dados.turma_id, aluno_id)
+    tarefa = Tarefa(aluno_id=aluno_id, disciplina=disciplina, **dados.model_dump())
 
     return await tarefa_repository.criar_tarefa(tarefa)
 
@@ -54,10 +52,12 @@ async def atualizar_tarefa(
     if tarefa is None:
         return None
 
-    return await tarefa_repository.atualizar_tarefa(
-        tarefa,
-        novos_dados,
-    )
+    if "turma_id" in novos_dados:
+        turma_id = novos_dados["turma_id"]
+        if turma_id != tarefa.turma_id:
+            novos_dados["disciplina"] = await disciplina_da_turma(turma_id, aluno_id)
+
+    return await tarefa_repository.atualizar_tarefa(tarefa, novos_dados)
 
 
 async def excluir_tarefa(
@@ -70,3 +70,12 @@ async def excluir_tarefa(
         return False
 
     return await tarefa_repository.excluir_tarefa(tarefa)
+
+
+async def disciplina_da_turma(turma_id: PydanticObjectId | None, aluno_id: UUID) -> str | None:
+    if turma_id is None:
+        return None
+    turma = await academico_repository.buscar_turma(turma_id)
+    if turma is None or str(aluno_id) not in turma.alunos:
+        raise PermissionError("Selecione uma turma ativa da qual você participa")
+    return turma.disciplina

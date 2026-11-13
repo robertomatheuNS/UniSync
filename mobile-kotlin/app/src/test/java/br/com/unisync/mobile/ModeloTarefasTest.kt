@@ -25,11 +25,12 @@ class ModeloTarefasTest {
     private class Fake : Tarefas {
         val itens = MutableStateFlow(listOf(Tarefa("a", "aluno-a", "Estudar", StatusTarefa.A_FAZER)))
         var falha: Exception? = null
+        var recebido: DadosTarefa? = null
         override fun observar(alunoId: String) = itens
         override suspend fun ultimaAtualizacao(alunoId: String) = 100L
         override suspend fun atualizar(alunoId: String, token: String) { falha?.let { throw it } }
-        override suspend fun criar(alunoId: String, token: String, titulo: String) { falha?.let { throw it } }
-        override suspend fun editar(alunoId: String, token: String, id: String, titulo: String, status: StatusTarefa) { falha?.let { throw it } }
+        override suspend fun criar(alunoId: String, token: String, dados: DadosTarefa) { falha?.let { throw it }; recebido = dados }
+        override suspend fun editar(alunoId: String, token: String, id: String, dados: DadosTarefa) { falha?.let { throw it }; recebido = dados }
         override suspend fun excluir(alunoId: String, token: String, id: String) { falha?.let { throw it } }
     }
     @Test fun falhaDeRedePreservaCacheEDataAnterior() = runTest(dispatcher) {
@@ -47,9 +48,24 @@ class ModeloTarefasTest {
         val modelo = ModeloTarefas(sessao(), repo) {}
         runCurrent()
         repo.falha = IOException()
-        modelo.salvar("a", "Novo título", StatusTarefa.CONCLUIDO); runCurrent()
+        modelo.salvar("a", DadosTarefa("Novo título", StatusTarefa.CONCLUIDO)); runCurrent()
         assertEquals("Estudar", modelo.estado.value.itens.single().titulo)
         assertEquals(0, modelo.estado.value.confirmacao)
+        assertNotNull(modelo.estado.value.erro)
+        modelo.fechar()
+    }
+    @Test fun metadadosChegamAoRepositorioETarefaForaDaContaERejeitada() = runTest(dispatcher) {
+        val repo = Fake()
+        val modelo = ModeloTarefas(sessao(), repo) {}
+        runCurrent()
+        val dados = DadosTarefa("Revisar", StatusTarefa.CONCLUIDO, PrioridadeTarefa.ALTA, java.time.LocalDate.of(2028, 2, 29))
+        modelo.salvar("a", dados); runCurrent()
+        assertEquals(dados, repo.recebido)
+        assertEquals(1, modelo.estado.value.confirmacao)
+        repo.recebido = null
+        modelo.salvar("de-outra-conta", dados); runCurrent()
+        assertNull(repo.recebido)
+        assertEquals(1, modelo.estado.value.confirmacao)
         assertNotNull(modelo.estado.value.erro)
         modelo.fechar()
     }
