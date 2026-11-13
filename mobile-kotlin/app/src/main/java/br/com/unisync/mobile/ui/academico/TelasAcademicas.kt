@@ -41,7 +41,7 @@ private fun CabecalhoAcademico(estado: EstadoAcademico, aoAtualizar: () -> Unit)
 @Composable
 fun TelaTurmas(estado: EstadoAcademico, professorId: String?, aoAtualizar: () -> Unit,
     aoSalvar: (String?, DadosTurma) -> Unit, aoEntrar: (String) -> Unit, aoArquivar: (String) -> Unit,
-    aoVerAvisos: (String) -> Unit, aoLimparMensagem: () -> Unit) {
+    aoVerAvisos: (String) -> Unit, aoLimparMensagem: () -> Unit, aoVerMural: ((String) -> Unit)? = null) {
     var formulario by rememberSaveable { mutableStateOf(false) }
     var edicaoId by rememberSaveable { mutableStateOf<String?>(null) }
     var entrada by rememberSaveable { mutableStateOf(false) }
@@ -86,6 +86,7 @@ fun TelaTurmas(estado: EstadoAcademico, professorId: String?, aoAtualizar: () ->
                     }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TextButton(onClick = { aoVerAvisos(turma.id) }) { Text("Ver avisos") }
+                        aoVerMural?.let { abrir -> TextButton(onClick = { abrir(turma.id) }) { Text("Ver mural") } }
                         if (professorId == turma.professorId) {
                             TextButton(enabled = !ocupado, onClick = { aoLimparMensagem(); edicaoId = turma.id; formulario = true }) { Text("Editar turma") }
                             TextButton(enabled = !ocupado, onClick = { aoLimparMensagem(); arquivarId = turma.id }) { Text("Arquivar turma") }
