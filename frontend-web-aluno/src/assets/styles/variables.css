@@ -45,6 +45,9 @@
 --aside-width: 17rem;
 --color-highlight: #4fa3c4;
 
+--color-toggle-track: #0b1630;
+--color-toggle-thumb: #e8edf2;
+
 }
 
 /* Modo escuro: só redefinimos as variáveis. */
