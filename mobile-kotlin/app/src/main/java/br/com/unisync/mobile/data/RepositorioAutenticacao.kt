@@ -5,26 +5,38 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URI
-import java.io.IOException
+import br.com.unisync.mobile.BuildConfig
+import br.com.unisync.mobile.domain.auth.Autenticacao
+import org.json.JSONException
+import java.net.SocketTimeoutException
+import java.net.ConnectException
+import java.net.UnknownHostException
 
-class RepositorioAutenticacao(private val urlBase: String = "http://127.0.0.1:5040") {
-    suspend fun entrar(email: String, senha: String): SessaoAutenticada {
+class RepositorioAutenticacao(private val urlBase: String = BuildConfig.AUTH_BASE_URL) : Autenticacao {
+    override suspend fun entrar(email: String, senha: String): SessaoAutenticada {
         val resposta = enviarRequisicao("login", JSONObject().put("email", email).put("senha", senha))
         val token = resposta.optString("token").takeIf { it.isNotBlank() }
             ?: throw ExcecaoAutenticacao("Resposta de autenticação inválida.")
         return SessaoAutenticada.doToken(token)
     }
 
-    suspend fun cadastrar(nome: String, email: String, senha: String, codigoProfessor: String?) {
+    override suspend fun cadastrar(nome: String, email: String, senha: String, codigoProfessor: String?) {
         val corpo = JSONObject().put("nome", nome).put("email", email).put("senha", senha)
         if (codigoProfessor != null) corpo.put("codigoProfessor", codigoProfessor)
         enviarRequisicao(if (codigoProfessor == null) "" else "professores", corpo)
     }
 
     private suspend fun enviarRequisicao(caminho: String, corpo: JSONObject): JSONObject = withContext(Dispatchers.IO) {
-        val conexao = URI("$urlBase/api/usuarios/$caminho").toURL().openConnection() as HttpURLConnection
+        if (urlBase.isBlank()) throw ExcecaoAutenticacao("Configure o endereço do serviço para esta versão do aplicativo.")
+        val base = URI(urlBase)
+        if (base.host.isNullOrBlank() || base.scheme !in listOf("http", "https") ||
+            (!BuildConfig.DEBUG && base.scheme != "https")) {
+            throw ExcecaoAutenticacao("O endereço do serviço é inválido. A versão de produção exige HTTPS.")
+        }
+        val conexao = URI("${urlBase.trimEnd('/')}/api/usuarios${if (caminho.isEmpty()) "" else "/$caminho"}").toURL().openConnection() as HttpURLConnection
         try {
             conexao.requestMethod = "POST"
+            conexao.instanceFollowRedirects = false
             conexao.connectTimeout = 10000
             conexao.readTimeout = 15000
             conexao.doOutput = true
@@ -42,11 +54,19 @@ class RepositorioAutenticacao(private val urlBase: String = "http://127.0.0.1:50
                 }
                 throw ExcecaoAutenticacao(mensagem)
             }
-            JSONObject(texto)
+            try {
+                if (texto.isBlank()) JSONObject() else JSONObject(texto)
+            } catch (_: JSONException) {
+                throw ExcecaoAutenticacao("O serviço retornou uma resposta inválida. Tente novamente.")
+            }
+        } catch (_: SocketTimeoutException) {
+            throw ExcecaoAutenticacao("O serviço demorou para responder. Tente novamente.")
+        } catch (_: UnknownHostException) {
+            throw ExcecaoAutenticacao("Não foi possível localizar o serviço. Confira a conexão e tente novamente.")
+        } catch (_: ConnectException) {
+            throw ExcecaoAutenticacao("Não foi possível conectar ao serviço. Confira a conexão e tente novamente.")
         } finally {
             conexao.disconnect()
         }
     }
 }
-
-class ExcecaoAutenticacao(mensagem: String) : IOException(mensagem)

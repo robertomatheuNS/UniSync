@@ -5,11 +5,17 @@
 -->
 <data-extraction-rules>
     <cloud-backup>
+        <exclude domain="sharedpref" path="sessao_segura.xml" />
+        <exclude domain="database" path="unisync.db" />
         <!-- TODO: Use <include> and <exclude> to control what is backed up.
         <include .../>
         <exclude .../>
         -->
     </cloud-backup>
+    <device-transfer>
+        <exclude domain="sharedpref" path="sessao_segura.xml" />
+        <exclude domain="database" path="unisync.db" />
+    </device-transfer>
     <!--
     <device-transfer>
         <include .../>
