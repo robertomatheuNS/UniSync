@@ -30,14 +30,14 @@ fi
 "$adb_local" install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 mkdir -p app/build/reports/academico
 resultado=$("$adb_local" shell am instrument -w \
-    -e class br.com.unisync.mobile.AcademicoUiTest,br.com.unisync.mobile.AcademicoLocalE2ETest,br.com.unisync.mobile.AutenticacaoUiTest,br.com.unisync.mobile.OportunidadesUiTest,br.com.unisync.mobile.TarefasUiTest,br.com.unisync.mobile.TarefasRoomTest,br.com.unisync.mobile.SessaoSeguraTest \
-    -e e2eAcademico true -e codigoProfessorAcademico "$codigo_professor" \
+    -e class br.com.unisync.mobile.LembretesUiTest,br.com.unisync.mobile.LembretesRoomTest,br.com.unisync.mobile.LembretesLocalE2ETest,br.com.unisync.mobile.AlertasTest,br.com.unisync.mobile.AcademicoUiTest,br.com.unisync.mobile.AcademicoLocalE2ETest,br.com.unisync.mobile.AutenticacaoUiTest,br.com.unisync.mobile.OportunidadesUiTest,br.com.unisync.mobile.TarefasUiTest,br.com.unisync.mobile.TarefasRoomTest,br.com.unisync.mobile.SessaoSeguraTest \
+    -e e2eLembretes true -e e2eAcademico true -e codigoProfessorAcademico "$codigo_professor" \
     br.com.unisync.mobile.test/androidx.test.runner.AndroidJUnitRunner)
 printf '%s\n' "$resultado" | tee app/build/reports/academico/instrumentacao.txt
 if [[ "$resultado" != *"OK ("* || "$resultado" == *"FAILURES!!!"* || "$resultado" == *"INSTRUMENTATION_FAILED"* ]]; then
     exit 1
 fi
-for captura in turmas-claro.png aviso-formulario-escuro.png turmas-paisagem-fonte-ampliada.png academico-turma-professor.png academico-aviso-aluno.png; do
+for captura in lembrete-formulario-escuro.png turmas-claro.png aviso-formulario-escuro.png turmas-paisagem-fonte-ampliada.png academico-turma-professor.png academico-aviso-aluno.png; do
     "$adb_local" exec-out run-as br.com.unisync.mobile cat "cache/$captura" > "app/build/reports/academico/$captura"
 done
 "$adb_local" shell am start -n br.com.unisync.mobile/.MainActivity

@@ -29,8 +29,8 @@ def test_criar_e_listar_por_usuario(usuario, monkeypatch, papel):
     monkeypatch.setattr(repo,"listar",listar)
     client = TestClient(app)
     assert client.post("/lembretes/criar",json={"titulo":"  Estudar  "}).status_code == 201
-    criar.assert_awaited_once_with({"titulo":"Estudar"}, usuario.id)
-    assert client.get("/lembretes/listar").json() == [item]
+    criar.assert_awaited_once_with({"agendado_em": None, "titulo":"Estudar"}, usuario.id)
+    assert client.get("/lembretes/listar").json() == [{**item, "agendado_em": None}]
     listar.assert_awaited_once_with(usuario.id)
 
 @pytest.mark.parametrize("metodo,caminho,body", [
@@ -97,3 +97,35 @@ def test_cors_shell():
         "Access-Control-Request-Headers":"authorization"})
     assert response.status_code==200
     assert response.headers["access-control-allow-origin"]=="http://localhost:8081"
+
+
+@pytest.mark.parametrize("horario", ["2027-01-01T09:00:00", "2027-02-30T09:00:00Z", "data inválida"])
+def test_agendamento_exige_data_e_fuso(horario):
+    with pytest.raises(ValidationError):
+        LembreteCreate(titulo="Entrega", agendado_em=horario)
+
+
+def test_agendamento_normaliza_utc_e_permite_remover_sem_apagar_em_patch_legado():
+    dados = LembreteCreate(titulo="Entrega", agendado_em="2027-01-10T09:00:00-03:00")
+    assert dados.agendado_em.isoformat() == "2027-01-10T12:00:00+00:00"
+    assert LembreteUpdate(titulo="Novo").model_dump(exclude_unset=True) == {"titulo": "Novo"}
+    assert LembreteUpdate(agendado_em=None).model_dump(exclude_unset=True) == {"agendado_em": None}
+
+
+def test_http_preserva_agendamento_na_resposta(usuario, monkeypatch):
+    from datetime import datetime, timezone
+    item = {"_id": PydanticObjectId(), "titulo": "Novo", "concluido": False,
+            "agendado_em": datetime(2027, 1, 10, 12, tzinfo=timezone.utc)}
+    atualizar = AsyncMock(return_value=item)
+    monkeypatch.setattr(repo, "atualizar", atualizar)
+    resposta = TestClient(app).patch(f"/lembretes/atualizar/{item['_id']}", json={"titulo": "Novo"})
+    assert resposta.status_code == 200
+    assert resposta.json()["agendado_em"] == "2027-01-10T12:00:00Z"
+    assert atualizar.call_args.args[2] == {"titulo": "Novo"}
+
+
+def test_bson_sem_fuso_e_interpretado_como_utc():
+    from datetime import datetime
+    from src.schemas.lembrete import LembreteResponse
+    resposta = LembreteResponse(id=PydanticObjectId(), titulo="BSON", concluido=False, agendado_em=datetime(2027, 1, 10, 12))
+    assert resposta.model_dump(mode="json")["agendado_em"] == "2027-01-10T12:00:00Z"
