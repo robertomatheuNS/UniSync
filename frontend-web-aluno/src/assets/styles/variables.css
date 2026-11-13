@@ -26,6 +26,7 @@
   #ffffff 0%,
   #e6fbff 60%,
   var(--color-accent) 100%
+  );
 
   --color-field: #ffffff;
   --color-error: #c62828;
@@ -38,7 +39,6 @@
   --color-scheme: light;
 
   --color-calendar: #e4e2e0;
-);
 
 --header-height: 4.5rem;
 --sidebar-width: 11rem;

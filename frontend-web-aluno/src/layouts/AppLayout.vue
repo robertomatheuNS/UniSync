@@ -30,7 +30,7 @@ const isSidebarCollapsed = ref(false)
 .app-layout {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1fr var(--aside-width);
+  grid-template-columns: var(--sidebar-width) minmax(0, 1fr) minmax(12rem, 15rem);
   grid-template-rows: var(--header-height) 1fr;
   grid-template-areas:
     'header header header'
@@ -48,6 +48,7 @@ const isSidebarCollapsed = ref(false)
 }
 
 .app-layout__content {
+  min-width: 0;
   grid-area: content;
   display: flex;
   flex-direction: column;
@@ -76,6 +77,7 @@ const isSidebarCollapsed = ref(false)
   .app-layout__aside {
     padding: 0 var(--space-md);
   }
+  .app-layout__content { padding: 0 var(--space-md); }
 }
 .app-layout--collapsed {
   --sidebar-width: 5rem;
