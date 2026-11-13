@@ -1,22 +1,29 @@
-```vue
 <script setup>
 import logo from '@/assets/images/logo.svg'
 import avatar from '@/assets/images/avatar.jpg'
 import bellIcon from '@/assets/icons/bell.svg'
 import ThemeToggle from '@/components/layout/ThemeToggle.vue'
+import { logout } from '@/services/shellAuth'
 
-// TODO: substituir por dados reais quando o back-end existir
 const NOTIFICATION_COUNT = 1
 </script>
 
 <template>
   <header class="app-header">
-    <img :src="logo" alt="UniSync" class="app-header__logo" />
+    <img
+      :src="logo"
+      alt="UniSync"
+      class="app-header__logo"
+    />
 
     <div class="app-header__actions">
       <ThemeToggle />
 
-      <button type="button" class="app-header__bell" aria-label="Notificações">
+      <button
+        type="button"
+        class="app-header__bell"
+        aria-label="Notificações"
+      >
         <img
           :src="bellIcon"
           alt=""
@@ -36,16 +43,24 @@ const NOTIFICATION_COUNT = 1
         alt="Foto do usuário"
         class="app-header__avatar"
       />
+
+      <button
+        type="button"
+        class="app-header__logout"
+        @click="logout"
+      >
+        Sair
+      </button>
     </div>
   </header>
 </template>
 
 <style scoped>
 .app-header {
-  padding: 0 var(--space-lg);
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 0 var(--space-lg);
   background: var(--color-header);
 }
 
@@ -63,6 +78,7 @@ const NOTIFICATION_COUNT = 1
   position: relative;
   border: none;
   background: none;
+  cursor: pointer;
 }
 
 .app-header__bell-icon {
@@ -88,5 +104,20 @@ const NOTIFICATION_COUNT = 1
   height: 3rem;
   border-radius: 50%;
   object-fit: cover;
+}
+
+.app-header__logout {
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-primary);
+  color: var(--color-white);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.app-header__logout:hover {
+  opacity: 0.85;
 }
 </style>
