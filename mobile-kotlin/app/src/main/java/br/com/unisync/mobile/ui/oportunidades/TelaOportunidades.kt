@@ -11,6 +11,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import br.com.unisync.mobile.domain.oportunidades.Oportunidade
+import br.com.unisync.mobile.domain.oportunidades.DadosOportunidade
 import br.com.unisync.mobile.ui.componentes.*
 import java.time.LocalDate
 import java.time.YearMonth
@@ -19,11 +20,24 @@ import java.time.format.FormatStyle
 import java.util.Locale
 
 @Composable
-fun TelaOportunidades(estado: EstadoOportunidades, aoAtualizar: () -> Unit) {
+fun TelaOportunidades(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
+    professorId: String? = null, aoSalvar: (String?, DadosOportunidade) -> Unit = { _, _ -> },
+    aoExcluir: (String) -> Unit = {}) {
     var busca by rememberSaveable { mutableStateOf("") }
     var tipo by rememberSaveable { mutableStateOf("") }
     var apenasFuturas by rememberSaveable { mutableStateOf(false) }
     var detalhe by rememberSaveable { mutableStateOf<String?>(null) }
+    var formulario by rememberSaveable { mutableStateOf(false) }
+    var edicaoId by rememberSaveable { mutableStateOf<String?>(null) }
+    var excluirId by rememberSaveable { mutableStateOf<String?>(null) }
+    var confirmacaoInicial by remember { mutableIntStateOf(estado.confirmacao) }
+    LaunchedEffect(estado.confirmacao) {
+        if (estado.confirmacao > confirmacaoInicial) {
+            formulario = false; excluirId = null; detalhe = null; confirmacaoInicial = estado.confirmacao
+        }
+    }
+    val gerenciando = !professorId.isNullOrBlank()
+    val ocupado = estado.salvando || estado.atualizando
     val categorias = estado.itens.map { it.tipo }.distinct().sorted()
     val filtradas = estado.itens.filter {
         (tipo.isEmpty() || it.tipo == tipo) && (!apenasFuturas || !it.encerrada()) &&
@@ -31,6 +45,9 @@ fun TelaOportunidades(estado: EstadoOportunidades, aoAtualizar: () -> Unit) {
     }
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { CabecalhoOportunidades(estado, aoAtualizar) }
+        if (gerenciando) item { Button(enabled = !ocupado, onClick = {
+            edicaoId = null; formulario = true
+        }) { Text("Publicar oportunidade") } }
         item { OutlinedTextField(busca, { busca = it }, label = { Text("Buscar oportunidades") }, modifier = Modifier.fillMaxWidth()) }
         item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tipo.isEmpty(), onClick = { tipo = "" }, label = { Text("Todas as categorias") })
@@ -42,13 +59,28 @@ fun TelaOportunidades(estado: EstadoOportunidades, aoAtualizar: () -> Unit) {
         }
         items(filtradas, key = { it.id }) { oportunidade -> CartaoOportunidade(oportunidade) { detalhe = oportunidade.id } }
     }
-    estado.itens.find { it.id == detalhe }?.let { oportunidade -> DetalheOportunidade(oportunidade) { detalhe = null } }
+    estado.itens.find { it.id == detalhe }?.let { oportunidade ->
+        DetalheOportunidade(oportunidade, podeEditar = gerenciando && oportunidade.professorId == professorId,
+            ocupado = ocupado,
+            aoEditar = { edicaoId = oportunidade.id; detalhe = null; formulario = true },
+            aoExcluir = { excluirId = oportunidade.id; detalhe = null }, aoFechar = { detalhe = null })
+    }
+    if (formulario) FormularioOportunidade(estado.itens.find { it.id == edicaoId }, estado.salvando, estado.erro,
+        aoSalvar = { aoSalvar(edicaoId, it) }, aoFechar = { formulario = false })
+    estado.itens.find { it.id == excluirId }?.let { oportunidade ->
+        AlertDialog(onDismissRequest = { if (!estado.salvando) excluirId = null },
+            title = { Text("Excluir oportunidade?") },
+            text = { Column { Text("${oportunidade.titulo}\nA publicação será removida para todos os usuários.")
+                estado.erro?.let { MensagemDeErro(it) } } },
+            confirmButton = { TextButton(enabled = !ocupado, onClick = { aoExcluir(oportunidade.id) }) { Text("Excluir", color = MaterialTheme.colorScheme.error) } },
+            dismissButton = { TextButton(enabled = !estado.salvando, onClick = { excluirId = null }) { Text("Cancelar") } })
+    }
 }
 
 @Composable
 private fun CabecalhoOportunidades(estado: EstadoOportunidades, aoAtualizar: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        TextButton(onClick = aoAtualizar, enabled = !estado.atualizando) { Text("Atualizar oportunidades") }
+        TextButton(onClick = aoAtualizar, enabled = !estado.atualizando && !estado.salvando) { Text("Atualizar oportunidades") }
         Text("Até 100 oportunidades. Busca e filtros aplicados aos itens carregados.", style = MaterialTheme.typography.bodySmall)
         if (estado.atualizando || estado.lendo) LinearProgressIndicator(Modifier.fillMaxWidth())
         estado.erro?.let { MensagemDeErro(it) }
@@ -69,12 +101,17 @@ private fun CartaoOportunidade(item: Oportunidade, aoAbrir: () -> Unit) {
 }
 
 @Composable
-private fun DetalheOportunidade(item: Oportunidade, aoFechar: () -> Unit) {
+private fun DetalheOportunidade(item: Oportunidade, podeEditar: Boolean = false, ocupado: Boolean = false,
+    aoEditar: () -> Unit = {}, aoExcluir: () -> Unit = {}, aoFechar: () -> Unit) {
     AlertDialog(onDismissRequest = aoFechar, title = { Text(item.titulo) },
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(item.tipo); Text(item.dataFormatada()); Text(item.materia); Text("Professor: ${item.professor}")
             Text(item.descricao?.takeIf { it.isNotBlank() } ?: "Nenhuma descrição informada.")
             if (item.encerrada()) Text("Evento já realizado")
+            if (podeEditar) {
+                OutlinedButton(enabled = !ocupado, onClick = aoEditar) { Text("Editar oportunidade") }
+                TextButton(enabled = !ocupado, onClick = aoExcluir) { Text("Excluir oportunidade", color = MaterialTheme.colorScheme.error) }
+            }
         } }, confirmButton = { TextButton(onClick = aoFechar) { Text("Fechar") } })
 }
 

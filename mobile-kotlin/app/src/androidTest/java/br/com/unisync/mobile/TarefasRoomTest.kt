@@ -9,6 +9,23 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class TarefasRoomTest {
+    @Test fun migracaoPreservaOportunidadeLegadaSemInventarAutoria() = runBlocking {
+        val contexto = InstrumentationRegistry.getInstrumentation().targetContext
+        val nome = "migracao-op-${java.util.UUID.randomUUID()}.db"
+        contexto.openOrCreateDatabase(nome, 0, null).use { antigo ->
+            antigo.execSQL("CREATE TABLE tarefas (id TEXT NOT NULL, alunoId TEXT NOT NULL, titulo TEXT NOT NULL, status TEXT NOT NULL, PRIMARY KEY(alunoId, id))")
+            antigo.execSQL("CREATE TABLE sincronizacoes (alunoId TEXT NOT NULL PRIMARY KEY, atualizadoEm INTEGER NOT NULL)")
+            antigo.execSQL("CREATE TABLE oportunidades (id TEXT NOT NULL PRIMARY KEY, titulo TEXT NOT NULL, professor TEXT NOT NULL, materia TEXT NOT NULL, descricao TEXT, tipo TEXT NOT NULL, dataEvento TEXT NOT NULL)")
+            antigo.execSQL("INSERT INTO oportunidades VALUES ('id', 'Palestra legada', 'Ana', 'Kotlin', NULL, 'Palestra', '2027-01-10T14:30:00')")
+            antigo.version = 2
+        }
+        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_2_3).build()
+        try {
+            val item = banco.oportunidades().observar().first().single()
+            assertEquals("Palestra legada", item.titulo); assertNull(item.professorId)
+        } finally { banco.close(); contexto.deleteDatabase(nome) }
+    }
+
     @Test fun migracaoPreservaTarefasDaVersaoAnterior() = runBlocking {
         val contexto = InstrumentationRegistry.getInstrumentation().targetContext
         val nome = "migracao-${java.util.UUID.randomUUID()}.db"
@@ -18,7 +35,8 @@ class TarefasRoomTest {
             antigo.execSQL("INSERT INTO tarefas VALUES ('id', 'aluno', 'Tarefa preservada', 'A_FAZER')")
             antigo.version = 1
         }
-        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_1_2).build()
+        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome)
+            .addMigrations(BancoUniSync.MIGRACAO_1_2, BancoUniSync.MIGRACAO_2_3).build()
         try {
             assertEquals("Tarefa preservada", banco.tarefas().observar("aluno").first().single().titulo)
             assertTrue(banco.oportunidades().observar().first().isEmpty())

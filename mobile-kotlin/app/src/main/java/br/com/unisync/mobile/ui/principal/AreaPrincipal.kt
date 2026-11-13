@@ -43,7 +43,8 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
     val modelo = remember(sessao.token) { if (sessao.perfil == PerfilUsuario.ALUNO)
         ModeloTarefas(sessao, aplicacao.tarefas, aoExpirar) else null }
     DisposableEffect(modelo) { onDispose { modelo?.fechar() } }
-    val modeloOportunidades = remember(sessao.token) { ModeloOportunidades(aplicacao.oportunidades, sessao.token, aoExpirar) }
+    val modeloOportunidades = remember(sessao.token) { ModeloOportunidades(aplicacao.oportunidades, sessao.token, aoExpirar,
+        usuarioId = sessao.usuarioId, nomeProfessor = sessao.nome, professor = sessao.perfil == PerfilUsuario.PROFESSOR) }
     val oportunidades by modeloOportunidades.estado.collectAsStateWithLifecycle()
     DisposableEffect(modeloOportunidades) { onDispose { modeloOportunidades.fechar() } }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -90,7 +91,9 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                 }
             }
             composable("tarefas") { modelo?.let { TelaTarefas(estado, it::atualizar, it::salvar, it::excluir) } }
-            composable("oportunidades") { TelaOportunidades(oportunidades, modeloOportunidades::atualizar) }
+            composable("oportunidades") { TelaOportunidades(oportunidades, modeloOportunidades::atualizar,
+                professorId = sessao.usuarioId.takeIf { sessao.perfil == PerfilUsuario.PROFESSOR },
+                aoSalvar = modeloOportunidades::salvar, aoExcluir = modeloOportunidades::excluir) }
             composable("calendario") { TelaCalendario(oportunidades, modeloOportunidades::atualizar) }
             composable("perfil") {
                 LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -105,7 +108,7 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                     }
                     erroPreferencia?.let { item { MensagemDeErro(it) } }
                     mensagem?.let { item { MensagemDeErro(it) } }
-                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando) { Text("Sair da conta") } }
+                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando && !oportunidades.salvando && !oportunidades.atualizando) { Text("Sair da conta") } }
                 }
             }
             listOf("turmas", "avisos").forEach { modulo -> composable(modulo) {

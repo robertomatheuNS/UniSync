@@ -13,7 +13,8 @@ data class SincronizacaoLocal(@PrimaryKey val alunoId: String, val atualizadoEm:
 
 @Entity(tableName = "oportunidades")
 data class OportunidadeLocal(@PrimaryKey val id: String, val titulo: String, val professor: String,
-    val materia: String, val descricao: String?, val tipo: String, val dataEvento: String)
+    val materia: String, val descricao: String?, val tipo: String, val dataEvento: String,
+    val professorId: String? = null)
 
 @Dao
 interface OportunidadeDao {
@@ -23,6 +24,8 @@ interface OportunidadeDao {
     suspend fun salvar(itens: List<OportunidadeLocal>)
     @Query("DELETE FROM oportunidades")
     suspend fun limpar()
+    @Query("DELETE FROM oportunidades WHERE id = :id")
+    suspend fun excluir(id: String)
     @Transaction
     suspend fun substituir(itens: List<OportunidadeLocal>) { limpar(); salvar(itens) }
 }
@@ -55,11 +58,16 @@ interface TarefaDao {
     }
 }
 
-@Database(entities = [TarefaLocal::class, SincronizacaoLocal::class, OportunidadeLocal::class], version = 2, exportSchema = true)
+@Database(entities = [TarefaLocal::class, SincronizacaoLocal::class, OportunidadeLocal::class], version = 3, exportSchema = true)
 abstract class BancoUniSync : RoomDatabase() {
     abstract fun tarefas(): TarefaDao
     abstract fun oportunidades(): OportunidadeDao
     companion object {
+        val MIGRACAO_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE oportunidades ADD COLUMN professorId TEXT")
+            }
+        }
         val MIGRACAO_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS oportunidades (id TEXT NOT NULL PRIMARY KEY, titulo TEXT NOT NULL, professor TEXT NOT NULL, materia TEXT NOT NULL, descricao TEXT, tipo TEXT NOT NULL, dataEvento TEXT NOT NULL)")
