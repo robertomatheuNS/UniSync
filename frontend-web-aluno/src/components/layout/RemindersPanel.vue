@@ -1,16 +1,30 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import trashIcon from '@/assets/icons/trash.svg'
 
-const INITIAL_ROWS = 6
+const MIN_ROWS = 6
 
 function createReminder() {
   return { id: crypto.randomUUID(), text: '', done: false }
 }
 
-const reminders = ref(Array.from({ length: INITIAL_ROWS }, createReminder))
+const reminders = ref(Array.from({ length: MIN_ROWS }, createReminder))
+
+const hasCompleted = computed(() => reminders.value.some((reminder) => reminder.done))
 
 function addReminder() {
   reminders.value.push(createReminder())
+}
+
+function fillEmptyRows() {
+  while (reminders.value.length < MIN_ROWS) {
+    reminders.value.push(createReminder())
+  }
+}
+
+function removeCompleted() {
+  reminders.value = reminders.value.filter((reminder) => !reminder.done)
+  fillEmptyRows()
 }
 </script>
 
@@ -36,9 +50,26 @@ function addReminder() {
       </li>
     </ul>
 
-    <button type="button" class="reminders__add" aria-label="Adicionar lembrete" @click="addReminder">
-      +
-    </button>
+    <div class="reminders__footer">
+      <button
+        type="button"
+        class="reminders__trash"
+        :disabled="!hasCompleted"
+        aria-label="Apagar lembretes marcados"
+        @click="removeCompleted"
+      >
+        <img :src="trashIcon" alt="" class="reminders__trash-icon icon" />
+      </button>
+
+      <button
+        type="button"
+        class="reminders__add"
+        aria-label="Adicionar lembrete"
+        @click="addReminder"
+      >
+        +
+      </button>
+    </div>
   </section>
 </template>
 
@@ -93,9 +124,30 @@ function addReminder() {
   text-decoration: line-through;
 }
 
+.reminders__footer {
+  margin-top: var(--space-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.reminders__trash {
+  padding: 0.25rem;
+  border: none;
+  background: none;
+}
+
+.reminders__trash:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.reminders__trash-icon {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
 .reminders__add {
-  display: block;
-  margin: var(--space-md) 0 0 auto;
   width: 2rem;
   height: 2rem;
   border: none;
