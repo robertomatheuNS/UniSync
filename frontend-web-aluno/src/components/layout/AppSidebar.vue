@@ -38,6 +38,7 @@ const collapsed = defineModel('collapsed', { type: Boolean, default: false })
     <button type="button" class="app-sidebar__settings" aria-label="Configurações">
       <img :src="settingsIcon" alt="" class="app-sidebar__icon icon" />
     </button>
+  <a class="equipe" href="https://teste2234234.my.canva.site/in-cio" target="_blank" rel="noopener noreferrer">Conheça a equipe ↗</a>
   </nav>
 </template>
 
@@ -123,4 +124,5 @@ const collapsed = defineModel('collapsed', { type: Boolean, default: false })
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+.equipe { padding:1rem; color:var(--color-text); font-size:.8rem; text-align:center; }
 </style>

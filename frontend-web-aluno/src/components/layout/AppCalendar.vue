@@ -1,117 +1,114 @@
 <script setup>
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { buildMonthCells } from '@/utils/calendar'
-
-const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-
-const today = new Date()
-const monthLabel = today.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
-const cells = buildMonthCells(today)
-
-function isSunday(index) {
-  return index % 7 === 0
+const hoje = ref(new Date()),
+  mes = ref(new Date(hoje.value.getFullYear(), hoje.value.getMonth(), 1)),
+  selecionada = ref(new Date())
+const dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+const cells = computed(() => buildMonthCells(mes.value))
+const rotulo = computed(() =>
+  mes.value.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+)
+const igual = (a, b) => a.toDateString() === b.toDateString()
+const data = (dia) =>
+  new Date(mes.value.getFullYear(), mes.value.getMonth(), dia)
+function mover(delta) {
+  mes.value = new Date(mes.value.getFullYear(), mes.value.getMonth() + delta, 1)
 }
+function voltarHoje() {
+  hoje.value = new Date()
+  mes.value = new Date(hoje.value.getFullYear(), hoje.value.getMonth(), 1)
+  selecionada.value = hoje.value
+}
+let relogio
+onMounted(() => {
+  relogio = setInterval(() => {
+    hoje.value = new Date()
+  }, 60000)
+})
+onBeforeUnmount(() => clearInterval(relogio))
 </script>
-
 <template>
   <section class="calendar" aria-label="Calendário">
-    <h2 class="calendar__month">{{ monthLabel }}</h2>
-
-    <div class="calendar__grid">
-      <span
-        v-for="(weekday, index) in WEEKDAYS"
-        :key="weekday"
-        class="calendar__weekday"
-        :class="{ 'calendar__sunday': isSunday(index) }"
-      >
-        {{ weekday }}
-      </span>
-
-      <span
-        v-for="(day, index) in cells"
-        :key="index"
-        class="calendar__day"
-        :class="{
-          'calendar__sunday': isSunday(index),
-          'calendar__day--today': day === today.getDate(),
-        }"
-      >
-        {{ day }}
-      </span>
+    <header>
+      <button aria-label="Mês anterior" @click="mover(-1)">‹</button>
+      <h2 aria-live="polite">{{ rotulo }}</h2>
+      <button aria-label="Próximo mês" @click="mover(1)">›</button>
+    </header>
+    <div class="calendar-grid">
+      <span v-for="dia in dias" :key="dia">{{ dia }}</span>
+      <template v-for="(dia, index) in cells" :key="index">
+        <button
+          v-if="dia"
+          :aria-label="
+            data(dia).toLocaleDateString('pt-BR', { dateStyle: 'full' })
+          "
+          :aria-current="igual(data(dia), hoje) ? 'date' : undefined"
+          :aria-pressed="igual(data(dia), selecionada)"
+          @click="selecionada = data(dia)"
+        >
+          {{ dia }}
+        </button>
+        <span v-else />
+      </template>
     </div>
+    <footer>
+      <button class="botao" @click="voltarHoje">Hoje</button
+      ><time :datetime="selecionada.toLocaleDateString('sv-SE')">{{
+        selecionada.toLocaleDateString('pt-BR')
+      }}</time>
+    </footer>
   </section>
 </template>
-
 <style scoped>
 .calendar {
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  background: var(--color-card);
-}
-
-.calendar__month {
-  margin-bottom: var(--space-sm);
-  font-size: 1rem;
-  text-align: center;
-  text-transform: capitalize;
-}
-
-.calendar__grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.25rem;
-  text-align: center;
-  font-size: 0.85rem;
-}
-
-.calendar__weekday {
-  font-weight: 700;
-}
-
-.calendar__sunday {
-  color: var(--color-error);
-}
-
-.calendar__day--today {
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-}
-
-.calendar {
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
+  padding: 1rem;
   background: var(--color-calendar);
+  border-radius: 16px;
+  color: var(--color-text);
 }
-
-.calendar__month {
-  margin-bottom: var(--space-sm);
-  font-size: 1rem;
+header,
+footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+h2 {
+  font-size: 0.9rem;
+  text-transform: capitalize;
   text-align: center;
 }
-
-.calendar__month::first-letter {
-  text-transform: uppercase;
+button {
+  background: none;
+  border: 0;
+  color: inherit;
+  border-radius: 8px;
+  min-height: 2rem;
+  min-width: 1.6rem;
 }
-
-.calendar__grid {
+header button {
+  font-size: 1.8rem;
+}
+.calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.6rem 0.25rem;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   text-align: center;
-  color: var(--color-highlight);
+  gap: 0.2rem;
+  margin: 1rem 0;
+  font-size: 0.75rem;
 }
-
-.calendar__weekday {
-  font-weight: 700;
+.calendar-grid button:hover {
+  background: var(--color-header);
 }
-
-.calendar__sunday {
-  color: var(--color-error);
+[aria-current='date'] {
+  font-weight: 800;
+  border: 1px solid var(--color-highlight);
 }
-
-.calendar__day--today {
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
+[aria-pressed='true'] {
+  background: var(--color-header);
+}
+footer {
+  font-size: 0.8rem;
 }
 </style>

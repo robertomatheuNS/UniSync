@@ -120,4 +120,4 @@ API_BASE_URL = os.getenv(
     "https://localhost:7129",
 )
 
-AUTH_MOCK = os.getenv("AUTH_MOCK", "True").lower() == "true"
+AUTH_MOCK = os.getenv("AUTH_MOCK", "False").lower() == "true"

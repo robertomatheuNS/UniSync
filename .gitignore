@@ -28,3 +28,7 @@
 /docs/.agents/
 /docs/UniSync-Mobile-System-Design.docx
 /docs/PLANO-ENGENHARIA-SOFTWARE-MOBILE-KOTLIN.md
+
+# Resultados locais dos testes de navegador
+**/test-results/
+**/playwright-report/
