@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from beanie import Document, PydanticObjectId
 from pydantic import Field
 from pymongo import IndexModel
+from src.schemas.anexos_mural import AnexoArmazenado
 
 
 class Publicacao(Document):
@@ -13,6 +14,7 @@ class Publicacao(Document):
     conteudo: str
     criado_em: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     atualizado_em: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    anexos: list[AnexoArmazenado] = Field(default_factory=list)
     curtidas: list[str] = Field(default_factory=list)
     versao: int = 1
     excluida: bool = False

@@ -158,7 +158,7 @@ Para executar os testes sem E2E usando Docker:
 docker compose run --rm --build --no-deps api python -m pytest -m "not e2e" -v
 ```
 
-**Validação do mural:** 162 testes unitários e HTTP aprovados, excluindo o teste Pytest marcado como E2E.
+**Validação do mural e anexos:** 188 testes unitários e HTTP aprovados, excluindo o teste Pytest marcado como E2E.
 
 ### Teste de integração E2E
 
@@ -185,7 +185,7 @@ Estão implementados CRUD de oportunidades, tarefas e lembretes, turmas com matr
 
 Os fluxos Android usam as APIs locais diretamente. O script `../mobile-kotlin/scripts/testar-academico-local.sh` valida os ciclos reais de turmas, avisos, tarefas, lembretes e mural com contas técnicas. O teste Pytest E2E de oportunidades descrito acima é um roteiro separado e exige suas próprias variáveis de ambiente.
 
-O mural inclui comentários com edição e moderação e curtidas individuais. Continuam previstas a definição de eventos remotos, anexos e notificações push. A existência desses itens no plano não significa que já façam parte dos contratos publicados.
+O mural inclui comentários com edição e moderação, curtidas individuais e anexos privados. Continuam previstas a definição de eventos remotos e notificações push. A existência desses itens no plano não significa que já façam parte dos contratos publicados.
 
 ## Mural colaborativo por turma
 
@@ -207,7 +207,7 @@ Cada resumo contém `id`, `turma_id`, `turma_nome`, `disciplina`, `autor_id`, `a
 
 Edição e exclusão conferem a versão atomicamente. Uma revisão desatualizada recebe **409**, sem sobrescrever ou remover a versão nova. A exclusão retira o item das consultas e registra internamente quem o removeu. Falta de acesso retorna **403**; publicação removida ou turma arquivada retorna **404**.
 
-Esta entrega inclui publicações de texto, comentários, curtidas individuais, filtros e paginação. Anexos e push não fazem parte deste contrato.
+Esta entrega inclui publicações de texto, comentários, curtidas individuais, anexos privados, filtros e paginação. Push não faz parte deste contrato.
 
 ### Comentários e curtidas
 
@@ -227,3 +227,24 @@ Cada comentário contém `id`, `publicacao_id`, `autor_id`, `autor`, `papel_auto
 A curtida usa operações atômicas e idempotentes: repetir o mesmo PUT não duplica nem alterna a reação. A resposta contém apenas `publicacao_id`, `total_curtidas` e `curtiu`, sem expor a lista de usuários. Os resumos e detalhes da publicação também incluem `total_curtidas` e `curtiu`. Alterar uma curtida não incrementa a versão do texto da publicação.
 
 O Android só limpa o rascunho de comentário após confirmação do servidor; curtir não apaga o texto. A conversa utiliza lista com paginação e mantém o texto e sua versão ao recriar a tela. As leituras ficam na memória da sessão; esta etapa não implementa cache persistente ou sincronização remota em segundo plano para o mural.
+
+### Anexos privados do mural
+
+Após criar a publicação, seu autor pode anexar até **três arquivos**, de até **4 MiB cada**: PDF (`application/pdf`), PNG (`image/png`) ou JPEG (`image/jpeg`). A extensão deve corresponder ao tipo e a API verifica assinaturas de início/fim do conteúdo. Nomes têm até 150 caracteres e não podem conter separadores de caminho ou caracteres de controle. Arquivos vazios, tipos diferentes e envios incompletos são rejeitados.
+
+| Método | Rota | Uso |
+|---|---|---|
+| GET | `/mural/{publicacao_id}/anexos` | Metadados, permissões e limites |
+| PUT | `/mural/{publicacao_id}/anexos/{anexo_id}?nome=roteiro.pdf` | Enviar bytes do arquivo com seu Content-Type |
+| GET | `/mural/{publicacao_id}/anexos/{anexo_id}/conteudo` | Baixar bytes após autorização |
+| DELETE | `/mural/{publicacao_id}/anexos/{anexo_id}` | Remover arquivo; operação idempotente |
+
+O cliente gera um identificador hexadecimal de 24 caracteres para cada seleção. PUT recebe o conteúdo bruto, sem multipart, base64 ou compressão de transporte. Retorna **201** no primeiro envio e **200** para o mesmo identificador, nome, tipo e SHA-256. Reutilizar o identificador para outro conteúdo retorna **409**. Um quarto anexo também retorna **409**; arquivo acima do limite retorna **413** e tipo/assinatura incompatível retorna **415**. O corpo é lido em partes e o limite é aplicado mesmo sem Content-Length.
+
+A listagem retorna `itens`, `pode_adicionar`, `limite` e `tamanho_maximo`. Cada item contém `id`, `publicacao_id`, `nome`, `tipo`, `tamanho`, `sha256`, `criado_em` e `pode_excluir`; não inclui os bytes ou uma URL pública. Somente o autor adiciona arquivos. O autor e o professor responsável podem removê-los; os participantes autorizados da turma ativa podem baixar. Cada operação verifica o JWT, a publicação e a turma, inclusive após receber o corpo de um envio. Arquivamento e exclusão da publicação impedem novos acessos.
+
+Os binários ficam no MongoDB, em um array limitado da própria publicação. Limite de quantidade e gravação são atômicos. Os três arquivos somam no máximo 12 MiB, abaixo do [limite BSON de 16 MiB](https://www.mongodb.com/docs/manual/reference/limits/#bson-document-size). Essa política evita armazenamento auxiliar e arquivos órfãos nesta etapa. Consultas de publicações e curtidas projetam somente metadados, excluindo `anexos.dados`; apenas o download consulta o binário correspondente. Remover um anexo apaga seus bytes, e excluir a publicação remove todos os seus anexos na mesma escrita. Anexos não alteram a versão do texto da publicação.
+
+O download usa `Content-Disposition: attachment`, `X-Content-Type-Options: nosniff` e `Cache-Control: private, no-store`. O Android confere tamanho e SHA-256 antes de abrir. A seleção usa o seletor do sistema sem permissão ampla de armazenamento; o envio mostra progresso e mantém a seleção/identificador em caso de falha ou recriação da tela. Abertura usa uma cópia transitória no cache privado e URI do FileProvider com acesso somente de leitura para o aplicativo escolhido. O encerramento da sessão limpa as cópias e revoga suas permissões; abrir novamente exige nova consulta autenticada. Isso não implementa disponibilidade offline dos anexos.
+
+Para validar API e interface com serviços reais, execute `ANDROID_SERIAL=emulator-5556 ../mobile-kotlin/scripts/testar-academico-local.sh` com o emulador temporário e as APIs locais disponíveis. O ciclo cobre envio e download, limite de três arquivos de 4 MiB, reenvio idempotente, moderação, isolamento entre contas e bloqueio após remover a publicação ou arquivar a turma. O teste de UI usa um resultado controlado do contrato do seletor do Android e lê uma URI real do FileProvider; não automatiza a interface de um provedor externo de documentos.

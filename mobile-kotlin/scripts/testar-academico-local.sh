@@ -39,14 +39,14 @@ fi
 "$adb_local" install -r -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
 mkdir -p app/build/reports/academico
 resultado=$("$adb_local" shell am instrument -w \
-    -e class br.com.unisync.mobile.ConversaUiTest,br.com.unisync.mobile.MuralUiTest,br.com.unisync.mobile.MuralLocalE2ETest,br.com.unisync.mobile.LembretesUiTest,br.com.unisync.mobile.LembretesRoomTest,br.com.unisync.mobile.LembretesLocalE2ETest,br.com.unisync.mobile.AlertasTest,br.com.unisync.mobile.AcademicoUiTest,br.com.unisync.mobile.AcademicoLocalE2ETest,br.com.unisync.mobile.AutenticacaoUiTest,br.com.unisync.mobile.OportunidadesUiTest,br.com.unisync.mobile.TarefasUiTest,br.com.unisync.mobile.TarefasRoomTest,br.com.unisync.mobile.SessaoSeguraTest \
-    -e e2eMural true -e codigoProfessorMural "$codigo_mural" -e e2eLembretes true -e e2eAcademico true -e codigoProfessorAcademico "$codigo_professor" \
+    -e class br.com.unisync.mobile.AnexosUiTest,br.com.unisync.mobile.ArquivosAnexosTest,br.com.unisync.mobile.ConversaUiTest,br.com.unisync.mobile.MuralUiTest,br.com.unisync.mobile.MuralLocalE2ETest,br.com.unisync.mobile.NavegacaoLocalE2ETest,br.com.unisync.mobile.LembretesUiTest,br.com.unisync.mobile.LembretesRoomTest,br.com.unisync.mobile.LembretesLocalE2ETest,br.com.unisync.mobile.AlertasTest,br.com.unisync.mobile.AcademicoUiTest,br.com.unisync.mobile.AcademicoLocalE2ETest,br.com.unisync.mobile.AutenticacaoUiTest,br.com.unisync.mobile.OportunidadesUiTest,br.com.unisync.mobile.TarefasUiTest,br.com.unisync.mobile.TarefasRoomTest,br.com.unisync.mobile.SessaoSeguraTest \
+    -e e2eLocal true -e e2eMural true -e codigoProfessorMural "$codigo_mural" -e e2eLembretes true -e e2eAcademico true -e codigoProfessorAcademico "$codigo_professor" \
     br.com.unisync.mobile.test/androidx.test.runner.AndroidJUnitRunner)
 printf '%s\n' "$resultado" | tee app/build/reports/academico/instrumentacao.txt
 if [[ "$resultado" != *"OK ("* || "$resultado" == *"FAILURES!!!"* || "$resultado" == *"INSTRUMENTATION_FAILED"* ]]; then
     exit 1
 fi
-for captura in mural-comentario-escuro.png mural-conversa-aluno.png mural-formulario-escuro.png mural-publicacao-aluno.png mural-publicacao-professor.png lembrete-formulario-escuro.png turmas-claro.png aviso-formulario-escuro.png turmas-paisagem-fonte-ampliada.png academico-turma-professor.png academico-aviso-aluno.png; do
+for captura in mural-anexos-escuro.png mural-anexos-aluno.png mural-comentario-escuro.png mural-conversa-aluno.png mural-formulario-escuro.png mural-publicacao-aluno.png mural-publicacao-professor.png lembrete-formulario-escuro.png turmas-claro.png aviso-formulario-escuro.png turmas-paisagem-fonte-ampliada.png academico-turma-professor.png academico-aviso-aluno.png; do
     "$adb_local" exec-out run-as br.com.unisync.mobile cat "cache/$captura" > "app/build/reports/academico/$captura"
 done
 "$adb_local" shell am start -n br.com.unisync.mobile/.MainActivity

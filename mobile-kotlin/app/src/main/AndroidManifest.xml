@@ -17,6 +17,13 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.UniSync">
+        <provider
+            android:name=".arquivos.ProvedorAnexos"
+            android:authorities="${applicationId}.anexos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/anexos_paths" />
+        </provider>
         <receiver android:name=".notificacoes.RecebedorAlertas" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

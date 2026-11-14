@@ -377,3 +377,191 @@ def test_criar_comentario_limpa_escrita_se_publicacao_sumir(interacoes, monkeypa
 def test_interacoes_exigem_token(metodo, sufixo, body):
     kwargs = {"json": body} if body is not None else {}
     assert getattr(TestClient(app), metodo)("/mural/507f1f77bcf86cd799439011"+sufixo, **kwargs).status_code == 401
+
+
+@pytest.fixture
+def anexos(ambiente, monkeypatch):
+    from src.repositories import anexos_mural_repository as arquivos
+    async def adicionar(publicacao_id, autor_id, anexo):
+        item = await repo.buscar(publicacao_id)
+        if item is None or item.autor_id != autor_id:
+            return False
+        if not hasattr(item, "anexos"):
+            item.anexos = []
+        if len(item.anexos) >= 3 or any(a.id == anexo.id for a in item.anexos):
+            return False
+        item.anexos.append(anexo)
+        return True
+    async def baixar(publicacao_id, anexo_id):
+        item = await repo.buscar(publicacao_id)
+        return next((a.dados for a in getattr(item, "anexos", []) if a.id == anexo_id), None)
+    async def excluir(publicacao_id, anexo_id):
+        item = await repo.buscar(publicacao_id)
+        if item is None:
+            return False
+        item.anexos = [a for a in getattr(item, "anexos", []) if a.id != anexo_id]
+        return True
+    for nome in ("adicionar", "baixar", "excluir"):
+        monkeypatch.setattr(arquivos, nome, locals()[nome])
+    return ambiente
+
+
+PDF = b"%PDF-1.4\n1 0 obj << /Type /Catalog >> endobj\n%%EOF\n"
+
+
+def enviar_anexo(a, pub, usuario=None, id=None, nome="roteiro.pdf", tipo="application/pdf", dados=PDF):
+    id = id or PydanticObjectId()
+    return a.como(usuario or a.aluno).put(f"/mural/{pub['id']}/anexos/{id}", params={"nome": nome},
+                                        content=dados, headers={"Content-Type": tipo})
+
+
+def test_anexo_ciclo_privado_idempotencia_moderacao_e_versao_texto(anexos):
+    a = anexos
+    pub = publicar(a)
+    id = PydanticObjectId()
+    criado = enviar_anexo(a, pub, id=id)
+    assert criado.status_code == 201
+    item = criado.json()
+    assert item["tamanho"] == len(PDF) and len(item["sha256"]) == 64
+    assert "dados" not in item and "url" not in item
+    assert enviar_anexo(a, pub, id=id).status_code == 200
+    assert enviar_anexo(a, pub, id=id, nome="outro.pdf").status_code == 409
+    base = f"/mural/{pub['id']}/anexos"
+    lista = a.como(a.colega).get(base).json()
+    assert not lista["pode_adicionar"] and not lista["itens"][0]["pode_excluir"]
+    assert lista["limite"] == 3 and lista["tamanho_maximo"] == 4 * 1024 * 1024
+    arquivo = a.como(a.colega).get(f"{base}/{id}/conteudo")
+    assert arquivo.content == PDF
+    assert arquivo.headers["cache-control"] == "private, no-store"
+    assert arquivo.headers["x-content-type-options"] == "nosniff"
+    assert arquivo.headers["content-disposition"].startswith("attachment;")
+    assert a.como(a.aluno).get(f"/mural/buscar/{pub['id']}").json()["versao"] == 1
+    assert len(a.como(a.aluno).get(base).json()["itens"]) == 1
+    assert a.como(a.professor).get(base).json()["itens"][0]["pode_excluir"]
+    assert a.como(a.professor).delete(f"{base}/{id}").status_code == 204
+    assert a.como(a.professor).delete(f"{base}/{id}").status_code == 204
+    assert a.como(a.aluno).get(f"{base}/{id}/conteudo").status_code == 404
+
+
+@pytest.mark.parametrize("perfil", ["fora", "outro_prof"])
+def test_anexos_negam_leitura_envio_e_exclusao_fora_da_turma(anexos, perfil):
+    a = anexos
+    pub = publicar(a)
+    id = enviar_anexo(a, pub).json()["id"]
+    client = a.como(getattr(a, perfil))
+    base = f"/mural/{pub['id']}/anexos"
+    assert client.get(base).status_code == 403
+    assert client.get(f"{base}/{id}/conteudo").status_code == 403
+    assert client.delete(f"{base}/{id}").status_code == 403
+    assert enviar_anexo(a, pub, usuario=getattr(a, perfil)).status_code == 403
+
+
+def test_apenas_autor_adiciona_e_colega_nao_remove(anexos):
+    a = anexos
+    pub = publicar(a)
+    id = enviar_anexo(a, pub).json()["id"]
+    assert enviar_anexo(a, pub, usuario=a.colega).status_code == 403
+    assert enviar_anexo(a, pub, usuario=a.professor).status_code == 403
+    assert a.como(a.colega).delete(f"/mural/{pub['id']}/anexos/{id}").status_code == 403
+
+
+def test_limite_tres_com_reenvio_apos_resposta_perdida_e_vaga_apos_remover(anexos):
+    a = anexos
+    pub = publicar(a)
+    ids = [PydanticObjectId() for _ in range(3)]
+    for id in ids:
+        assert enviar_anexo(a, pub, id=id).status_code == 201
+    assert enviar_anexo(a, pub).status_code == 409
+    assert enviar_anexo(a, pub, id=ids[0]).status_code == 200
+    assert a.como(a.aluno).delete(f"/mural/{pub['id']}/anexos/{ids[0]}").status_code == 204
+    assert enviar_anexo(a, pub).status_code == 201
+
+
+@pytest.mark.parametrize("nome,tipo,dados,status", [
+    ("../roteiro.pdf", "application/pdf", PDF, 422), ("pasta\\roteiro.pdf", "application/pdf", PDF, 422),
+    ("a\r\n.pdf", "application/pdf", PDF, 422), ("a\u202e.pdf", "application/pdf", PDF, 422),
+    ("a.pdf", "text/html", b"<html/>", 415), ("a.html", "application/pdf", PDF, 415),
+    ("a.png", "image/png", PDF, 415), ("a.pdf", "application/pdf", b"", 422),
+    ("a.pdf", "application/pdf", b"a" * (4 * 1024 * 1024 + 1), 413),
+])
+def test_anexos_validam_tipo_assinatura_tamanho_e_nome(anexos, nome, tipo, dados, status):
+    assert enviar_anexo(anexos, publicar(anexos), nome=nome, tipo=tipo, dados=dados).status_code == status
+
+
+@pytest.mark.parametrize("alteracao", ["publicacao", "turma"])
+def test_remocao_ou_arquivamento_bloqueia_arquivos(anexos, alteracao):
+    a = anexos
+    pub = publicar(a)
+    id = enviar_anexo(a, pub).json()["id"]
+    if alteracao == "publicacao":
+        assert a.como(a.aluno).delete(f"/mural/excluir/{pub['id']}?versao=1").status_code == 204
+    else:
+        a.turma.ativa = False
+    base = f"/mural/{pub['id']}/anexos"
+    assert a.como(a.aluno).get(base).status_code == 404
+    assert a.como(a.aluno).get(f"{base}/{id}/conteudo").status_code == 404
+    assert a.como(a.professor).delete(f"{base}/{id}").status_code == 404
+    assert enviar_anexo(a, pub).status_code == 404
+
+
+def test_anexo_de_outra_publicacao_nao_e_exposto(anexos):
+    a = anexos
+    origem, outra = publicar(a), publicar(a)
+    id = enviar_anexo(a, origem).json()["id"]
+    assert a.como(a.aluno).get(f"/mural/{outra['id']}/anexos/{id}/conteudo").status_code == 404
+
+
+@pytest.mark.parametrize("metodo,sufixo", [("get", ""), ("put", "/507f1f77bcf86cd799439012?nome=a.pdf"),
+                                        ("get", "/507f1f77bcf86cd799439012/conteudo"), ("delete", "/507f1f77bcf86cd799439012")])
+def test_anexos_exigem_token(metodo, sufixo):
+    assert getattr(TestClient(app), metodo)("/mural/507f1f77bcf86cd799439011/anexos" + sufixo).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_anexo_limite_e_autoria_atomicos_e_projecoes_sem_binarios(monkeypatch):
+    from src.repositories import anexos_mural_repository as arquivos
+    from src.schemas.anexos_mural import AnexoArmazenado
+    colecao = AsyncMock()
+    colecao.update_one.return_value = SimpleNamespace(modified_count=1)
+    colecao.find_one.return_value = None
+    monkeypatch.setattr(Publicacao, "get_pymongo_collection", lambda: colecao)
+    anexo = AnexoArmazenado(id=PydanticObjectId(), nome="a.pdf", tipo="application/pdf", tamanho=len(PDF),
+                           sha256="hash", criado_em=datetime.now(timezone.utc), dados=PDF)
+    id = PydanticObjectId()
+    assert await arquivos.adicionar(id, "autor", anexo)
+    filtro, escrita = colecao.update_one.call_args.args
+    assert filtro["autor_id"] == "autor" and not filtro["excluida"]
+    assert filtro["anexos.id"] == {"$ne": anexo.id}
+    assert filtro["$expr"]["$lt"][1] == 3
+    assert escrita["$push"]["anexos"]["dados"] == PDF and "$inc" not in escrita
+    assert await repo.buscar(id) is None
+    assert colecao.find_one.call_args.args[1] == {"anexos.dados": 0}
+
+
+def test_anexo_limita_stream_sem_content_length_e_rejeita_envio_incompleto(anexos):
+    a = anexos
+    pub = publicar(a)
+    base = f"/mural/{pub['id']}/anexos/{PydanticObjectId()}?nome=a.pdf"
+    client = a.como(a.aluno)
+    assert client.put(base, content=iter([PDF]), headers={"Content-Type": "application/pdf"}).status_code == 201
+    assert client.put(base, content=iter([b"a" * (2 * 1024 * 1024), b"a" * (2 * 1024 * 1024 + 1)]),
+                      headers={"Content-Type": "application/pdf"}).status_code == 413
+    assert client.put(base, content=PDF, headers={"Content-Type": "application/pdf", "Content-Length": str(len(PDF) + 10)}).status_code == 400
+    assert client.put(base, content=PDF, headers={"Content-Type": "application/pdf", "Content-Encoding": "gzip"}).status_code == 415
+
+
+@pytest.mark.parametrize("nome,tipo,dados", [
+    ("imagem.png", "image/png", b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x00IEND\xaeB`\x82"),
+    ("imagem.JPEG", "image/jpeg", b"\xff\xd8\xff\xe0\xff\xd9"),
+    ("roteiro de revisão.pdf", "application/pdf", PDF),
+])
+def test_anexos_aceitam_tipos_e_nome_unicode_sem_expor_binarios_na_lista(anexos, nome, tipo, dados):
+    pub = publicar(anexos)
+    resposta = enviar_anexo(anexos, pub, nome=nome, tipo=tipo, dados=dados)
+    assert resposta.status_code == 201
+    id = resposta.json()["id"]
+    base = f"/mural/{pub['id']}/anexos"
+    lista = anexos.como(anexos.aluno).get(base)
+    assert lista.headers["cache-control"] == "private, no-store"
+    assert "dados" not in lista.json()["itens"][0]
+    assert anexos.como(anexos.aluno).get(f"{base}/{id}/conteudo").content == dados

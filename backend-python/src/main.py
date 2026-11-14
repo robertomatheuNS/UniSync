@@ -6,6 +6,7 @@ from src.routers import academico
 from src.services.academico_service import ErroAcademico
 from fastapi.responses import JSONResponse
 from src.routers import interacoes_mural
+from src.routers import anexos_mural
 from src.routers import mural
 from src.routers import lembretes
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,6 +51,7 @@ app.include_router(academico.router)
 app.include_router(lembretes.router)
 app.include_router(mural.router)
 app.include_router(interacoes_mural.router)
+app.include_router(anexos_mural.router)
 
 
 @app.exception_handler(ErroAcademico)

@@ -3,6 +3,8 @@ package br.com.unisync.mobile
 import android.app.Application
 import android.util.Log
 import br.com.unisync.mobile.data.RepositorioInteracoesMural
+import br.com.unisync.mobile.data.RepositorioAnexosMural
+import br.com.unisync.mobile.arquivos.ArquivosAnexos
 import br.com.unisync.mobile.data.RepositorioMural
 import br.com.unisync.mobile.data.RepositorioLembretes
 import br.com.unisync.mobile.data.SessaoAutenticada
@@ -25,6 +27,8 @@ class UniSyncApplication : Application() {
     val tarefas by lazy { RepositorioTarefas(banco.tarefas(), ClienteAcademico()) }
     val oportunidades by lazy { RepositorioOportunidades(banco.oportunidades(), ClienteAcademico()) }
     val interacoesMural by lazy { RepositorioInteracoesMural() }
+    val anexosMural by lazy { RepositorioAnexosMural() }
+    val arquivosAnexos by lazy { ArquivosAnexos(this) }
     val mural by lazy { RepositorioMural() }
     val academico by lazy { RepositorioAcademico() }
     val preferencias by lazy { PreferenciasUniSync(this) }
@@ -36,6 +40,7 @@ class UniSyncApplication : Application() {
         { preferencias.alertas(it).first() }, AlertasAndroid(this)) }
     override fun onCreate() {
         super.onCreate()
+        arquivosAnexos.limpar()
         escopoAplicacao.launch {
             combine(banco.tarefas().observarTodas(), banco.lembretes().observarTodos(), preferencias.mudancas) { _, _, _ -> Unit }
                 .collect { atualizarAlertas() }
@@ -47,6 +52,7 @@ class UniSyncApplication : Application() {
         catch (_: Exception) { Log.w("UniSync", "Não foi possível atualizar os alertas locais.") }
     }
     suspend fun limparDadosPrivados() {
+        arquivosAnexos.limpar()
         alertas.desativar()
         tarefas.limparCache(); lembretes.limparCache()
     }

@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.core.net.toUri
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
@@ -67,6 +68,12 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
     } }
     val conversa = modeloConversa?.estado?.collectAsStateWithLifecycle()?.value
     DisposableEffect(modeloConversa) { onDispose { modeloConversa?.fechar() } }
+    val modeloAnexos = remember(sessao.token, mural.detalhe?.id) { mural.detalhe?.let { item ->
+        ModeloAnexos(aplicacao.anexosMural, sessao.token, item.id, aoExpirar,
+            { erro -> modeloMural.interacaoIndisponivel(item.id, erro) })
+    } }
+    val anexos = modeloAnexos?.estado?.collectAsStateWithLifecycle()?.value
+    DisposableEffect(modeloAnexos) { onDispose { modeloAnexos?.fechar() } }
     val professor = sessao.perfil == PerfilUsuario.PROFESSOR
     val professorId = sessao.usuarioId.takeIf { professor }
     val modeloAcademico = remember(sessao.token) { ModeloAcademico(aplicacao.academico, sessao.token,
@@ -88,6 +95,11 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
         val observador = LifecycleEventObserver { _, evento -> if (evento == Lifecycle.Event.ON_START) {
             modeloConversa?.let { if (!it.estado.value.atualizando) it.atualizar() }
         } }
+        lifecycle.addObserver(observador)
+        onDispose { lifecycle.removeObserver(observador) }
+    }
+    DisposableEffect(lifecycle, modeloAnexos) {
+        val observador = LifecycleEventObserver { _, evento -> if (evento == Lifecycle.Event.ON_START) modeloAnexos?.atualizar() }
         lifecycle.addObserver(observador)
         onDispose { lifecycle.removeObserver(observador) }
     }
@@ -185,7 +197,11 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                 modeloMural::carregarMais, modeloMural::abrir, modeloMural::fecharDetalhe, modeloMural::salvar,
                 modeloMural::excluir, { nav.navigate("turmas") }, conversa,
                 { modeloConversa?.atualizar() }, { modeloConversa?.carregarMais() },
-                { id, versao, texto -> modeloConversa?.salvar(id, versao, texto) }, { modeloConversa?.excluir(it) }, { modeloConversa?.curtir(it) }) }
+                { id, versao, texto -> modeloConversa?.salvar(id, versao, texto) }, { modeloConversa?.excluir(it) }, { modeloConversa?.curtir(it) },
+                anexos, { modeloAnexos?.atualizar() },
+                { uri, envioId -> modeloAnexos?.enviar(envioId) { aplicacao.arquivosAnexos.ler(uri.toUri()) } },
+                { anexo -> modeloAnexos?.abrir(anexo) { dados -> aplicacao.arquivosAnexos.abrir(anexo, dados) } },
+                { anexo -> modeloAnexos?.excluir(anexo) { aplicacao.arquivosAnexos.limparAnexo(anexo.id) } }) }
             composable("perfil") {
                 LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     item { Text(sessao.nome, style = MaterialTheme.typography.titleLarge); Text(sessao.perfil.name.lowercase().replaceFirstChar { it.uppercase() }) }
@@ -210,7 +226,7 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                         }, aoRevisar = { escopo.launch { aplicacao.atualizarAlertas() } }) }
                     erroPreferencia?.let { item { MensagemDeErro(it) } }
                     mensagem?.let { item { MensagemDeErro(it) } }
-                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando && !oportunidades.salvando && !oportunidades.atualizando && !academico.salvando && !academico.atualizando && !lembretes.salvando && !lembretes.atualizando && !salvandoPreferencias && !mural.salvando && conversa?.salvando != true && conversa?.curtindo != true) { Text("Sair da conta") } }
+                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando && !oportunidades.salvando && !oportunidades.atualizando && !academico.salvando && !academico.atualizando && !lembretes.salvando && !lembretes.atualizando && !salvandoPreferencias && !mural.salvando && conversa?.salvando != true && conversa?.curtindo != true && anexos?.operando != true) { Text("Sair da conta") } }
                 }
             }
             composable("turmas") { TelaTurmas(academico, professorId, modeloAcademico::atualizar,
