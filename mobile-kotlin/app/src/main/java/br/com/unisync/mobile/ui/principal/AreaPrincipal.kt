@@ -61,6 +61,12 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
     val modeloMural = remember(sessao.token) { ModeloMural(aplicacao.mural, sessao.token, sessao.usuarioId, aoExpirar) }
     val mural by modeloMural.estado.collectAsStateWithLifecycle()
     DisposableEffect(modeloMural) { onDispose { modeloMural.fechar() } }
+    val modeloConversa = remember(sessao.token, mural.detalhe?.id) { mural.detalhe?.let { item ->
+        ModeloConversa(aplicacao.interacoesMural, sessao.token, sessao.usuarioId, item, aoExpirar,
+            modeloMural::atualizarCurtida, { erro -> modeloMural.interacaoIndisponivel(item.id, erro) })
+    } }
+    val conversa = modeloConversa?.estado?.collectAsStateWithLifecycle()?.value
+    DisposableEffect(modeloConversa) { onDispose { modeloConversa?.fechar() } }
     val professor = sessao.perfil == PerfilUsuario.PROFESSOR
     val professorId = sessao.usuarioId.takeIf { professor }
     val modeloAcademico = remember(sessao.token) { ModeloAcademico(aplicacao.academico, sessao.token,
@@ -74,6 +80,13 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
     DisposableEffect(lifecycle, modelo, modeloOportunidades, modeloAcademico, modeloLembretes, modeloMural) {
         val observador = LifecycleEventObserver { _, evento -> if (evento == Lifecycle.Event.ON_START) {
             modelo?.atualizar(); modeloOportunidades.atualizar(); modeloAcademico.atualizar(); modeloLembretes.atualizar(); modeloMural.atualizar()
+        } }
+        lifecycle.addObserver(observador)
+        onDispose { lifecycle.removeObserver(observador) }
+    }
+    DisposableEffect(lifecycle, modeloConversa) {
+        val observador = LifecycleEventObserver { _, evento -> if (evento == Lifecycle.Event.ON_START) {
+            modeloConversa?.let { if (!it.estado.value.atualizando) it.atualizar() }
         } }
         lifecycle.addObserver(observador)
         onDispose { lifecycle.removeObserver(observador) }
@@ -170,7 +183,9 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                 modeloLembretes::concluir, modeloLembretes::excluir, { nav.navigate("perfil") }, lembreteAgenda, { lembreteAgenda = null }) }
             composable("mural") { TelaMural(mural, academico.turmas, { modeloMural.atualizar() }, modeloMural::atualizar,
                 modeloMural::carregarMais, modeloMural::abrir, modeloMural::fecharDetalhe, modeloMural::salvar,
-                modeloMural::excluir, { nav.navigate("turmas") }) }
+                modeloMural::excluir, { nav.navigate("turmas") }, conversa,
+                { modeloConversa?.atualizar() }, { modeloConversa?.carregarMais() },
+                { id, versao, texto -> modeloConversa?.salvar(id, versao, texto) }, { modeloConversa?.excluir(it) }, { modeloConversa?.curtir(it) }) }
             composable("perfil") {
                 LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     item { Text(sessao.nome, style = MaterialTheme.typography.titleLarge); Text(sessao.perfil.name.lowercase().replaceFirstChar { it.uppercase() }) }
@@ -195,7 +210,7 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                         }, aoRevisar = { escopo.launch { aplicacao.atualizarAlertas() } }) }
                     erroPreferencia?.let { item { MensagemDeErro(it) } }
                     mensagem?.let { item { MensagemDeErro(it) } }
-                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando && !oportunidades.salvando && !oportunidades.atualizando && !academico.salvando && !academico.atualizando && !lembretes.salvando && !lembretes.atualizando && !salvandoPreferencias && !mural.salvando) { Text("Sair da conta") } }
+                    item { OutlinedButton(onClick = aoSair, enabled = !carregando && !estado.salvando && !estado.atualizando && !oportunidades.salvando && !oportunidades.atualizando && !academico.salvando && !academico.atualizando && !lembretes.salvando && !lembretes.atualizando && !salvandoPreferencias && !mural.salvando && conversa?.salvando != true && conversa?.curtindo != true) { Text("Sair da conta") } }
                 }
             }
             composable("turmas") { TelaTurmas(academico, professorId, modeloAcademico::atualizar,

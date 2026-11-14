@@ -5,7 +5,7 @@ import java.time.Instant
 data class Publicacao(val id: String, val turmaId: String, val turmaNome: String, val disciplina: String,
     val autorId: String, val autor: String, val papelAutor: String, val titulo: String, val resumo: String,
     val criadoEm: Instant, val atualizadoEm: Instant, val versao: Int, val podeEditar: Boolean, val podeExcluir: Boolean,
-    val conteudo: String? = null)
+    val conteudo: String? = null, val totalCurtidas: Int = 0, val curtiu: Boolean = false)
 
 data class DadosPublicacao(val turmaId: String, val titulo: String, val conteudo: String) {
     fun validar(): DadosPublicacao {

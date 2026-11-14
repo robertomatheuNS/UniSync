@@ -3,13 +3,15 @@ from src.services.academico_service import turma_autorizada, ErroAcademico
 
 
 def apresentar(item, turma, usuario, detalhe=False):
+    curtidas = getattr(item, "curtidas", [])
     proprio = item.autor_id == str(usuario.id)
     moderador = usuario.papel == "Professor" and turma.professor_id == str(usuario.id)
     resposta = dict(id=item.id, turma_id=turma.id, turma_nome=turma.nome, disciplina=turma.disciplina,
                     autor_id=item.autor_id, autor=item.autor, papel_autor=item.papel_autor,
                     titulo=item.titulo, resumo=item.conteudo[:240] + ("…" if len(item.conteudo) > 240 else ""),
                     criado_em=item.criado_em, atualizado_em=item.atualizado_em, versao=item.versao,
-                    pode_editar=proprio, pode_excluir=proprio or moderador)
+                    pode_editar=proprio, pode_excluir=proprio or moderador,
+                    total_curtidas=len(curtidas), curtiu=str(usuario.id) in curtidas)
     if detalhe:
         resposta["conteudo"] = item.conteudo
     return resposta

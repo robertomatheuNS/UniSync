@@ -22,7 +22,9 @@ import java.util.Locale
 @Composable
 fun TelaMural(estado: EstadoMural, turmas: List<Turma>, aoAtualizar: () -> Unit, aoFiltrar: (String?) -> Unit,
     aoCarregarMais: () -> Unit, aoAbrir: (String) -> Unit, aoFecharDetalhe: () -> Unit,
-    aoSalvar: (String?, Int?, DadosPublicacao) -> Unit, aoExcluir: (Publicacao) -> Unit, aoVerTurmas: () -> Unit) {
+    aoSalvar: (String?, Int?, DadosPublicacao) -> Unit, aoExcluir: (Publicacao) -> Unit, aoVerTurmas: () -> Unit,
+    conversa: EstadoConversa? = null, aoAtualizarComentarios: () -> Unit = {}, aoCarregarMaisComentarios: () -> Unit = {},
+    aoSalvarComentario: (String?, Int?, String) -> Unit = { _, _, _ -> }, aoExcluirComentario: (Comentario) -> Unit = {}, aoCurtir: (Boolean) -> Unit = {}) {
     var alvoDetalhe by rememberSaveable { mutableStateOf<String?>(null) }
     var formulario by rememberSaveable { mutableStateOf(false) }
     var editando by rememberSaveable { mutableStateOf(false) }
@@ -40,7 +42,7 @@ fun TelaMural(estado: EstadoMural, turmas: List<Turma>, aoAtualizar: () -> Unit,
     val abrir = { id: String -> alvoDetalhe = id; aoAbrir(id) }
     val fecharDetalhe = { alvoDetalhe = null; aoFecharDetalhe() }
     val filtrar = { turmaId: String? -> alvoDetalhe = null; aoFiltrar(turmaId) }
-    val ocupado = estado.salvando || estado.atualizando || estado.carregandoMais
+    val ocupado = estado.salvando || estado.atualizando || estado.carregandoMais || conversa?.salvando == true || conversa?.curtindo == true
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Mural da comunidade", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             Text("Compartilhe ideias, dúvidas e novidades com suas turmas.")
@@ -71,6 +73,7 @@ fun TelaMural(estado: EstadoMural, turmas: List<Turma>, aoAtualizar: () -> Unit,
                 Text(item.titulo, style = MaterialTheme.typography.titleMedium)
                 MetadadosPublicacao(item)
                 Text(item.resumo, style = MaterialTheme.typography.bodyMedium)
+                Text("${item.totalCurtidas} curtidas${if (item.curtiu) " • Você curtiu" else ""}", style = MaterialTheme.typography.bodySmall)
                 Text("Ver publicação", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
             }
         } }
@@ -83,23 +86,11 @@ fun TelaMural(estado: EstadoMural, turmas: List<Turma>, aoAtualizar: () -> Unit,
         FormularioPublicacao(if (editando) detalhe else null, turmas, estado.filtroTurma, ocupado,
             estado.erro, { formulario = false; editando = false }, aoSalvar)
     }
-    if (estado.abrindoId != null && !formulario && excluir == null) AlertDialog(onDismissRequest = { if (!estado.salvando) fecharDetalhe() },
-        title = { Text(detalhe?.titulo ?: "Publicação") }, text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (estado.carregandoDetalhe) LinearProgressIndicator(Modifier.fillMaxWidth())
-                detalhe?.let { item ->
-                    MetadadosPublicacao(item)
-                    Text(item.conteudo.orEmpty())
-                    if (item.podeEditar) OutlinedButton(enabled = !ocupado, onClick = { editando = true; formulario = true }) { Text("Editar publicação") }
-                    if (item.podeExcluir) {
-                        if (!item.podeEditar) Text("Como professor responsável, você pode remover esta publicação da turma.", style = MaterialTheme.typography.bodySmall)
-                        TextButton(enabled = !ocupado, onClick = { excluir = item }) { Text("Excluir publicação", color = MaterialTheme.colorScheme.error) }
-                    }
-                }
-                (estado.erroDetalhe ?: estado.erro)?.let { MensagemDeErro(it) }
-                if (!estado.carregandoDetalhe && detalhe == null) TextButton(onClick = { estado.abrindoId?.let(abrir) }) { Text("Tentar novamente") }
-            }
-        }, confirmButton = { TextButton(enabled = !estado.salvando, onClick = fecharDetalhe) { Text("Fechar publicação") } })
+    if (estado.abrindoId != null && !formulario && excluir == null) key(estado.abrindoId) {
+        DetalhePublicacao(estado, conversa, fecharDetalhe, { estado.abrindoId?.let(abrir) },
+            { editando = true; formulario = true }, { excluir = estado.detalhe },
+            aoAtualizarComentarios, aoCarregarMaisComentarios, aoSalvarComentario, aoExcluirComentario, aoCurtir)
+    }
     excluir?.let { item -> AlertDialog(onDismissRequest = { if (!estado.salvando) excluir = null }, title = { Text("Excluir publicação?") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(item.titulo); Text("A publicação deixará de aparecer no mural da turma."); estado.erro?.let { MensagemDeErro(it) }
@@ -109,7 +100,7 @@ fun TelaMural(estado: EstadoMural, turmas: List<Turma>, aoAtualizar: () -> Unit,
 }
 
 @Composable
-private fun MetadadosPublicacao(item: Publicacao) {
+internal fun MetadadosPublicacao(item: Publicacao) {
     val formato = remember { DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withLocale(Locale.forLanguageTag("pt-BR")).withZone(ZoneId.systemDefault()) }
     Text("${item.disciplina} • ${item.turmaNome}", style = MaterialTheme.typography.labelLarge)
     Text("${item.autor} • ${item.papelAutor}", style = MaterialTheme.typography.bodySmall)

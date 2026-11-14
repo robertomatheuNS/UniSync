@@ -193,3 +193,187 @@ async def test_repositorio_atualiza_com_autoria_e_versao_no_filtro_atomico(monke
     filtro, atualizacao = colecao.find_one_and_update.call_args.args
     assert filtro == {"_id": id, "autor_id": "autor", "versao": 3, "excluida": False}
     assert atualizacao["$inc"] == {"versao": 1}
+
+
+@pytest.fixture
+def interacoes(ambiente, monkeypatch):
+    from src.repositories import interacoes_mural_repository as conversa
+    comentarios = {}
+    async def curtir(publicacao_id, usuario_id, curtiu):
+        item = await repo.buscar(publicacao_id)
+        if item is None:
+            return None
+        curtidas = set(getattr(item, "curtidas", []))
+        if curtiu:
+            curtidas.add(usuario_id)
+        else:
+            curtidas.discard(usuario_id)
+        item.curtidas = sorted(curtidas)
+        return item
+    async def criar(dados):
+        agora = datetime.now(timezone.utc)
+        item = SimpleNamespace(id=PydanticObjectId(), versao=1, excluido=False, criado_em=agora, atualizado_em=agora, **dados)
+        comentarios[item.id] = item
+        return item
+    async def listar(publicacao_id, antes, limite):
+        return sorted([c for c in comentarios.values() if c.publicacao_id == publicacao_id and not c.excluido and
+                       (antes is None or c.id < antes)], key=lambda c: c.id, reverse=True)[:limite + 1]
+    async def buscar(id):
+        item = comentarios.get(id)
+        return item if item and not item.excluido else None
+    async def atualizar(id, publicacao_id, autor_id, versao, conteudo):
+        item = await buscar(id)
+        if item is None or item.publicacao_id != publicacao_id or item.autor_id != autor_id or item.versao != versao:
+            return None
+        item.conteudo = conteudo
+        item.versao += 1
+        item.atualizado_em = datetime.now(timezone.utc)
+        return item
+    async def excluir(id, publicacao_id, versao, usuario_id):
+        item = await buscar(id)
+        if item is None or item.publicacao_id != publicacao_id or item.versao != versao:
+            return False
+        item.excluido = True; item.excluido_por = usuario_id
+        return True
+    for nome in ("curtir", "criar", "listar", "buscar", "atualizar", "excluir"):
+        monkeypatch.setattr(conversa, nome, locals()[nome])
+    ambiente.comentarios = comentarios
+    return ambiente
+
+
+def comentar(a, publicacao, usuario=None, conteudo="Comentário da turma"):
+    resposta = a.como(usuario or a.aluno).post(f"/mural/{publicacao['id']}/comentarios", json={"conteudo": conteudo})
+    assert resposta.status_code == 201
+    return resposta.json()
+
+
+def test_curtida_idempotente_individual_sem_expor_identidades(interacoes):
+    a = interacoes
+    item = publicar(a)
+    caminho = f"/mural/{item['id']}/curtida"
+    aluno = a.como(a.aluno)
+    for _ in range(2):
+        resposta = aluno.put(caminho, json={"curtiu": True})
+        assert resposta.json() == {"publicacao_id": item["id"], "total_curtidas": 1, "curtiu": True}
+    assert a.como(a.colega).put(caminho, json={"curtiu": True}).json()["total_curtidas"] == 2
+    for _ in range(2):
+        assert aluno.put(caminho, json={"curtiu": False}).json() == {"publicacao_id": item["id"], "total_curtidas": 1, "curtiu": False}
+    detalhe = aluno.get(f"/mural/buscar/{item['id']}").json()
+    assert detalhe["versao"] == 1 and detalhe["total_curtidas"] == 1 and not detalhe["curtiu"]
+    assert "curtidas" not in detalhe
+    assert aluno.get(caminho).json() == {"publicacao_id": item["id"], "total_curtidas": 1, "curtiu": False}
+    lista = a.como(a.colega).get("/mural/listar").json()["itens"][0]
+    assert lista["curtiu"] and lista["total_curtidas"] == 1
+
+
+def test_comentario_autor_edita_com_versao_e_professor_modera(interacoes):
+    a = interacoes
+    publicacao = publicar(a)
+    comentario = comentar(a, publicacao)
+    caminho = f"/mural/{publicacao['id']}/comentarios/{comentario['id']}"
+    assert comentario["autor_id"] == str(a.aluno.id) and comentario["pode_editar"] and comentario["pode_excluir"]
+    assert comentario["criado_em"].endswith("Z")
+    assert a.como(a.colega).patch(caminho, json={"conteudo": "Não autorizado", "versao": 1}).status_code == 403
+    assert a.como(a.colega).delete(caminho+"?versao=1").status_code == 403
+    professor = a.como(a.professor)
+    caps = professor.get(f"/mural/{publicacao['id']}/comentarios").json()["itens"][0]
+    assert caps["pode_excluir"] and not caps["pode_editar"]
+    assert professor.patch(caminho, json={"conteudo": "Não pode editar", "versao": 1}).status_code == 403
+    aluno = a.como(a.aluno)
+    assert aluno.patch(caminho, json={"conteudo": "Revisão", "versao": 1}).json()["versao"] == 2
+    assert aluno.patch(caminho, json={"conteudo": "Antigo", "versao": 1}).status_code == 409
+    assert professor.delete(caminho+"?versao=1").status_code == 409
+    assert professor.delete(caminho+"?versao=2").status_code == 204
+    assert a.comentarios[PydanticObjectId(comentario["id"])].excluido_por == str(a.professor.id)
+    assert aluno.get(f"/mural/{publicacao['id']}/comentarios").json()["itens"] == []
+
+
+def test_comentarios_paginam_sem_misturar_publicacoes(interacoes):
+    a = interacoes
+    primeira = publicar(a)
+    segunda = publicar(a, titulo="Outro assunto")
+    for _ in range(3):
+        comentar(a, primeira)
+    comentar(a, segunda, conteudo="Só na segunda publicação")
+    caminho = f"/mural/{primeira['id']}/comentarios"
+    pagina = a.como(a.aluno).get(caminho+"?limite=2").json()
+    proxima = a.como(a.aluno).get(caminho+f"?limite=2&antes={pagina['proxima_pagina']}").json()
+    assert len({c["id"] for c in pagina["itens"] + proxima["itens"]}) == 3
+    assert proxima["proxima_pagina"] is None
+    assert all(c["publicacao_id"] == primeira["id"] for c in pagina["itens"] + proxima["itens"])
+    comentario = a.como(a.aluno).get(f"/mural/{segunda['id']}/comentarios").json()["itens"][0]
+    assert a.como(a.aluno).patch(caminho+f"/{comentario['id']}", json={"conteudo": "Movido", "versao": 1}).status_code == 404
+
+
+@pytest.mark.parametrize("perfil", ["fora", "outro_prof"])
+def test_interacoes_negam_usuarios_fora_da_turma(interacoes, perfil):
+    a = interacoes; item = publicar(a); comentario = comentar(a, item)
+    client = a.como(getattr(a, perfil)); caminho = f"/mural/{item['id']}"
+    assert client.get(caminho+"/comentarios").status_code == 403
+    assert client.post(caminho+"/comentarios", json={"conteudo": "Tentativa"}).status_code == 403
+    assert client.put(caminho+"/curtida", json={"curtiu": True}).status_code == 403
+    assert client.patch(caminho+f"/comentarios/{comentario['id']}", json={"conteudo": "Tentativa", "versao": 1}).status_code == 403
+    assert client.delete(caminho+f"/comentarios/{comentario['id']}?versao=1").status_code == 403
+
+
+@pytest.mark.parametrize("remover", ["publicacao", "turma"])
+def test_interacoes_bloqueadas_apos_remocao_ou_arquivamento(interacoes, remover):
+    a = interacoes; item = publicar(a); comentario = comentar(a, item)
+    if remover == "publicacao":
+        a.como(a.aluno).delete(f"/mural/excluir/{item['id']}?versao=1")
+    else:
+        a.turma.ativa = False
+    caminho = f"/mural/{item['id']}"; client = a.como(a.aluno)
+    assert client.get(caminho+"/comentarios").status_code == 404
+    assert client.post(caminho+"/comentarios", json={"conteudo": "Tentativa"}).status_code == 404
+    assert client.put(caminho+"/curtida", json={"curtiu": True}).status_code == 404
+    assert client.delete(caminho+f"/comentarios/{comentario['id']}?versao=1").status_code == 404
+
+
+@pytest.mark.parametrize("body", [{"conteudo": "  "}, {"conteudo": "x"*2001}, {"conteudo": "Teste", "autor_id": "forjado"}, {"conteudo": None}])
+def test_valida_comentario_e_recusa_autoria_forjada(interacoes, body):
+    item = publicar(interacoes)
+    assert interacoes.como(interacoes.aluno).post(f"/mural/{item['id']}/comentarios", json=body).status_code == 422
+
+
+@pytest.mark.parametrize("body", [{"curtiu": "sim"}, {"curtiu": None}, {"curtiu": True, "usuario_id": "forjado"}])
+def test_valida_curtida(interacoes, body):
+    item = publicar(interacoes)
+    assert interacoes.como(interacoes.aluno).put(f"/mural/{item['id']}/curtida", json=body).status_code == 422
+
+
+@pytest.mark.parametrize("query", ["limite=0", "limite=51", "antes=invalido"])
+def test_valida_cursor_e_limite_comentarios(interacoes, query):
+    item = publicar(interacoes)
+    assert interacoes.como(interacoes.aluno).get(f"/mural/{item['id']}/comentarios?{query}").status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_curtida_usa_operacao_atomica_e_nao_altera_versao(monkeypatch):
+    from src.repositories import interacoes_mural_repository as conversa
+    colecao = AsyncMock(); colecao.find_one_and_update.return_value = None
+    monkeypatch.setattr(Publicacao, "get_pymongo_collection", lambda: colecao)
+    id = PydanticObjectId()
+    await conversa.curtir(id, "aluno", True)
+    filtro, atualizacao = colecao.find_one_and_update.call_args.args
+    assert filtro == {"_id": id, "excluida": False}
+    assert atualizacao == {"$addToSet": {"curtidas": "aluno"}}
+    await conversa.curtir(id, "aluno", False)
+    assert colecao.find_one_and_update.call_args.args[1] == {"$pull": {"curtidas": "aluno"}}
+
+
+def test_criar_comentario_limpa_escrita_se_publicacao_sumir(interacoes, monkeypatch):
+    a = interacoes; item = publicar(a)
+    original = a.itens[PydanticObjectId(item["id"])]
+    monkeypatch.setattr(repo, "buscar", AsyncMock(side_effect=[original, None]))
+    resposta = a.como(a.aluno).post(f"/mural/{item['id']}/comentarios", json={"conteudo": "Concorrente"})
+    assert resposta.status_code == 404
+    assert all(c.excluido for c in a.comentarios.values())
+
+
+@pytest.mark.parametrize("metodo,sufixo,body", [("get", "/curtida", None), ("get", "/comentarios", None), ("post", "/comentarios", {"conteudo": "Teste"}),
+    ("put", "/curtida", {"curtiu": True}), ("patch", "/comentarios/507f1f77bcf86cd799439012", {"conteudo": "Teste", "versao": 1}),
+    ("delete", "/comentarios/507f1f77bcf86cd799439012?versao=1", None)])
+def test_interacoes_exigem_token(metodo, sufixo, body):
+    kwargs = {"json": body} if body is not None else {}
+    assert getattr(TestClient(app), metodo)("/mural/507f1f77bcf86cd799439011"+sufixo, **kwargs).status_code == 401

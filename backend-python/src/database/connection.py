@@ -7,6 +7,7 @@ from src.models.tarefa import Tarefa
 from src.models.academico import Aviso, Turma
 from src.models.lembrete import Lembrete
 from src.models.mural import Publicacao
+from src.models.comentario import Comentario
 
 
 client = AsyncMongoClient(settings.mongodb_url)
@@ -17,7 +18,7 @@ async def conectar_mongodb():
 
     await init_beanie(
         database=client[settings.mongodb_database],
-        document_models=[Oportunidade, Tarefa, Lembrete, Turma, Aviso, Publicacao]
+        document_models=[Oportunidade, Tarefa, Lembrete, Turma, Aviso, Publicacao, Comentario]
     )
 
     print("Conexão com MongoDB estabelecida!")

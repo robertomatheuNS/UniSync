@@ -2,6 +2,7 @@ package br.com.unisync.mobile
 
 import android.app.Application
 import android.util.Log
+import br.com.unisync.mobile.data.RepositorioInteracoesMural
 import br.com.unisync.mobile.data.RepositorioMural
 import br.com.unisync.mobile.data.RepositorioLembretes
 import br.com.unisync.mobile.data.SessaoAutenticada
@@ -23,6 +24,7 @@ class UniSyncApplication : Application() {
     val lembretes by lazy { RepositorioLembretes(banco.lembretes(), ClienteAcademico()) }
     val tarefas by lazy { RepositorioTarefas(banco.tarefas(), ClienteAcademico()) }
     val oportunidades by lazy { RepositorioOportunidades(banco.oportunidades(), ClienteAcademico()) }
+    val interacoesMural by lazy { RepositorioInteracoesMural() }
     val mural by lazy { RepositorioMural() }
     val academico by lazy { RepositorioAcademico() }
     val preferencias by lazy { PreferenciasUniSync(this) }
