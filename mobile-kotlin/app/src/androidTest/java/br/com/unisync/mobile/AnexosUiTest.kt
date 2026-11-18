@@ -73,7 +73,10 @@ class AnexosUiTest {
                 anexos = estado, aoEnviarAnexo = { _, _ -> estado = estado.copy(confirmacaoEnvio = 1, itens = listOf(anexo)) })
         } } }
         rolar("Seu comentário"); compose.onNodeWithText("Seu comentário").performTextInput("Meu rascunho permanece")
+        // O seletor controlado não abre outra Activity para fechar o teclado como o seletor real.
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
         rolar("Selecionar arquivo"); compose.onNodeWithText("Selecionar arquivo").performClick()
+        compose.waitUntil { compose.onAllNodesWithText("Selecionado: roteiro.pdf").fetchSemanticsNodes().isNotEmpty() }
         rolar("Enviar anexo"); compose.onNodeWithText("Enviar anexo").performClick()
         compose.onNodeWithText("Selecionado: roteiro.pdf").assertDoesNotExist()
         rolar("Seu comentário"); compose.onNodeWithText("Seu comentário").assertTextContains("Meu rascunho permanece")

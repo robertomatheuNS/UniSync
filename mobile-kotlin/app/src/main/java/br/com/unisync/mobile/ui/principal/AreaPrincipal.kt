@@ -29,6 +29,7 @@ import br.com.unisync.mobile.ui.oportunidades.*
 import br.com.unisync.mobile.ui.academico.*
 import br.com.unisync.mobile.ui.lembretes.*
 import br.com.unisync.mobile.ui.mural.*
+import br.com.unisync.mobile.ui.painel.*
 import br.com.unisync.mobile.notificacoes.*
 import kotlinx.coroutines.launch
 
@@ -82,6 +83,8 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
     DisposableEffect(modeloAcademico) { onDispose { modeloAcademico.fechar() } }
     var lembreteAgenda by rememberSaveable { mutableStateOf<String?>(null) }
     var tarefaAgenda by rememberSaveable { mutableStateOf<String?>(null) }
+    var avisoPainel by rememberSaveable { mutableStateOf<String?>(null) }
+    var oportunidadePainel by rememberSaveable { mutableStateOf<String?>(null) }
     var filtroAvisos by rememberSaveable { mutableStateOf<String?>(null) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle, modelo, modeloOportunidades, modeloAcademico, modeloLembretes, modeloMural) {
@@ -137,57 +140,22 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
         } } }) { padding ->
         NavHost(navController = nav, startDestination = "inicio", modifier = Modifier.padding(padding)) {
             composable("inicio") {
-                LazyColumn(contentPadding = PaddingValues(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    item { Text("Olá, ${sessao.nome}", style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.semantics { heading() }) }
-                    item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Vida acadêmica", style = MaterialTheme.typography.titleLarge)
-                        Text("${academico.turmas.size} turmas • ${if (professor) academico.avisos.size.toString() + " avisos publicados" else academico.avisos.count { !it.lido }.toString() + " avisos não lidos"}")
-                        if (academico.lendo) LinearProgressIndicator(Modifier.fillMaxWidth())
-                        academico.erro?.let { MensagemDeErro(it) }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { nav.navigate("turmas") }) { Text("Minhas turmas") }
-                            OutlinedButton(onClick = { filtroAvisos = null; nav.navigate("avisos") }) { Text("Ver avisos") }
-                            OutlinedButton(onClick = { nav.navigate("mural") }) { Text("Abrir mural") }
-                        }
-                    } } }
-                    if (modelo != null) {
-                        item { StatusSincronizacao(estado) }
-                        estado.erro?.let { item { MensagemDeErro(it) } }
-                        item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Text("Suas tarefas", style = MaterialTheme.typography.titleLarge)
-                            StatusTarefa.entries.forEach { status -> Text("${status.rotulo}: ${estado.itens.count { it.status == status }}") }
-                            Text("${estado.itens.count { it.atrasada() }} tarefas atrasadas")
-                            val proximas = estado.itens.filter { it.status != StatusTarefa.CONCLUIDO && it.prazo != null }.ordenadas().take(3)
-                            proximas.forEach { tarefa -> Text("${tarefa.prazo?.format(formatoPrazo)} • ${tarefa.titulo}") }
-                            Button(onClick = { nav.navigate("tarefas") }) { Text("Organizar tarefas") }
-                            TextButton(onClick = modelo::atualizar, enabled = !estado.atualizando) { Text("Atualizar") }
-                        } } }
-                    }
-                    item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Seus lembretes", style = MaterialTheme.typography.titleLarge)
-                        Text("${lembretes.itens.count { !it.concluido }} lembretes pendentes")
-                        if (lembretes.lendo) LinearProgressIndicator(Modifier.fillMaxWidth())
-                        lembretes.erro?.let { MensagemDeErro(it) }
-                        lembretes.itens.filter { !it.concluido && it.agendadoEm != null }.sortedBy { it.agendadoEm }.take(3).forEach { item ->
-                            TextButton(onClick = { lembreteAgenda = item.id; nav.navigate("lembretes") }) { Text("${item.horarioLocal()} • ${item.titulo}") }
-                        }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { nav.navigate("lembretes") }) { Text("Meus lembretes") }
-                            OutlinedButton(onClick = { nav.navigate("calendario") }) { Text("Ver agenda") }
-                        }
-                    } } }
-                    item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Oportunidades", style = MaterialTheme.typography.titleLarge)
-                        Text("${oportunidades.itens.count { !it.encerrada() }} próximos eventos entre os itens carregados")
-                        Button(onClick = { nav.navigate("oportunidades") }) { Text("Explorar oportunidades") }
-                    } } }
-                }
+                TelaInicio(sessao.nome, professor, academico, oportunidades, lembretes, estado.takeIf { modelo != null },
+                    AcoesInicio(atualizarAcademico = modeloAcademico::atualizar, atualizarOportunidades = modeloOportunidades::atualizar,
+                        atualizarTarefas = { modelo?.atualizar() }, atualizarLembretes = modeloLembretes::atualizar,
+                        verTurmas = { nav.navigate("turmas") }, verAvisos = { filtroAvisos = null; nav.navigate("avisos") },
+                        abrirAviso = { id -> filtroAvisos = null; avisoPainel = id; nav.navigate("avisos") { launchSingleTop = true } },
+                        verMural = { nav.navigate("mural") }, verTarefas = { nav.navigate("tarefas") },
+                        verLembretes = { nav.navigate("lembretes") }, verAgenda = { nav.navigate("calendario") },
+                        verOportunidades = { nav.navigate("oportunidades") },
+                        abrirOportunidade = { id -> oportunidadePainel = id; nav.navigate("oportunidades") { launchSingleTop = true } },
+                        abrirLembrete = { id -> lembreteAgenda = id; nav.navigate("lembretes") }))
             }
             composable("tarefas") { modelo?.let { TelaTarefas(estado, it::atualizar, it::salvar, it::excluir, academico.turmas, tarefaAgenda, { tarefaAgenda = null }) } }
             composable("oportunidades") { TelaOportunidades(oportunidades, modeloOportunidades::atualizar,
                 professorId = sessao.usuarioId.takeIf { sessao.perfil == PerfilUsuario.PROFESSOR },
-                aoSalvar = modeloOportunidades::salvar, aoExcluir = modeloOportunidades::excluir) }
+                aoSalvar = modeloOportunidades::salvar, aoExcluir = modeloOportunidades::excluir,
+                oportunidadeInicial = oportunidadePainel, aoConsumirOportunidade = { oportunidadePainel = null }) }
             composable("calendario") { TelaCalendario(oportunidades, { modeloOportunidades.atualizar(); modelo?.atualizar(); modeloLembretes.atualizar() }, estado,
                 aoAbrirTarefa = { tarefa -> tarefaAgenda = tarefa.id; nav.navigate("tarefas") }, lembretes = lembretes,
                 aoAbrirLembrete = { item -> lembreteAgenda = item.id; nav.navigate("lembretes") }) }
@@ -235,7 +203,8 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
                 aoVerMural = { modeloMural.fecharDetalhe(); modeloMural.atualizar(it); nav.navigate("mural") }) }
             composable("avisos") { TelaAvisos(academico, professorId, filtroAvisos, modeloAcademico::atualizar,
                 modeloAcademico::salvarAviso, modeloAcademico::excluirAviso, modeloAcademico::marcarLido,
-                aoAbrirTurmas = { nav.navigate("turmas") }, aoLimparMensagem = modeloAcademico::limparMensagem) }
+                aoAbrirTurmas = { nav.navigate("turmas") }, aoLimparMensagem = modeloAcademico::limparMensagem,
+                avisoInicial = avisoPainel, aoConsumirAviso = { avisoPainel = null }) }
         }
     }
 }
