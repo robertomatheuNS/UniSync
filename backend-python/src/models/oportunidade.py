@@ -9,6 +9,8 @@ class Oportunidade(Document):
     materia: str
     descricao: str | None
     tipo: str
+    url_inscricao: str | None = None
+    prazo_inscricao: datetime | None = None
     data_evento: datetime
 
     class Settings:

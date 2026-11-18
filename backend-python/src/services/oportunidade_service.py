@@ -1,5 +1,5 @@
 from src.models.oportunidade import Oportunidade
-from src.schemas.oportunidade import OportunidadeCreate, OportunidadeUpdate
+from src.schemas.oportunidade import OportunidadeCreate, OportunidadeUpdate, validar_intervalo_inscricao
 from src.repositories import oportunidade_repository
 from beanie import PydanticObjectId
 
@@ -50,7 +50,12 @@ async def atualizar_oportunidade(oportunidade_id: PydanticObjectId, dados_atuali
             "Você não tem permissão para alterar esta oportunidade"
         )
 
-    return await oportunidade_repository.atualizar_oportunidade(oportunidade, dados_novos,)
+    if "prazo_inscricao" in dados_novos or "data_evento" in dados_novos:
+        validar_intervalo_inscricao(
+            dados_novos.get("prazo_inscricao", oportunidade.prazo_inscricao),
+            dados_novos.get("data_evento", oportunidade.data_evento),
+        )
+    return await oportunidade_repository.atualizar_oportunidade(oportunidade, dados_novos)
 
 
 

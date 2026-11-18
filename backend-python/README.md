@@ -81,6 +81,10 @@ O backend Python não realiza login nem armazena senhas de usuários.
 
 A listagem aceita filtros como `tipo`, `professor`, `futuros`, `ordenar` e `limite`.
 
+Criação e atualização aceitam `url_inscricao` e `prazo_inscricao`, ambos opcionais. A URL deve usar HTTPS, ter até 2048 caracteres e não conter credenciais. O prazo deve ter fuso explícito e ser igual ou anterior ao início do evento. A resposta inclui os dois campos e explicita o fuso UTC de datas recuperadas do MongoDB.
+
+No PATCH, omitir um campo de inscrição preserva o valor anterior e enviar `null` remove o valor. A API valida mudanças parciais de data em conjunto com o campo já armazenado e recusa a edição se essa data mudar durante a gravação. Aluno ou outro professor continuam sem acesso à edição. A inscrição acontece no site publicado pelo professor.
+
 ### Tarefas
 
 | Método | Endpoint | Acesso |

@@ -13,6 +13,12 @@ O painel reúne turmas, avisos, oportunidades, tarefas do aluno e lembretes. Os 
 
 Os cards reutilizam os estados dos modelos já ativos na sessão. O painel não cria novas consultas por card, endpoints de backend ou tabelas Room. Os avisos continuam sem cache persistente após encerrar o aplicativo.
 
+## Inscrições em oportunidades
+
+Quem publica uma oportunidade pode informar um link HTTPS e um prazo de inscrição. O prazo é opcional e deve terminar até o início do evento. O painel e a agenda exibem esse prazo no fuso do aparelho, e o detalhe destaca prazos próximos (até três dias) e encerrados. O botão para abrir o site fica disponível enquanto o evento e o prazo permitem a inscrição.
+
+O participante se inscreve no site indicado. A ação de compartilhar apresenta o resumo e o link no [seletor do Android](https://developer.android.com/develop/ui/compose/sharing/send). A migração Room 5 → 6 mantém as oportunidades salvas e acrescenta os dois campos para consulta no cache.
+
 ## Validação local
 
 Com as APIs locais em execução e um emulador de teste já iniciado:

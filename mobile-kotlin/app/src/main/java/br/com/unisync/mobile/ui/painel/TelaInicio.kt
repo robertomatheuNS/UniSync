@@ -87,7 +87,8 @@ fun TelaInicio(nome: String, professor: Boolean, academico: EstadoAcademico, opo
                     Text(item.titulo, style = MaterialTheme.typography.titleMedium)
                     Text(item.dataFormatada())
                     Text("${item.materia} • ${item.professor}", style = MaterialTheme.typography.bodySmall)
-                    if (item.encerrada()) Text("Evento já realizado", style = MaterialTheme.typography.bodySmall)
+                    if (item.prazoInscricao != null || item.encerrada()) Text(item.situacaoInscricao(), style = MaterialTheme.typography.bodySmall)
+                    item.prazoFormatado()?.let { Text("Inscrição até $it", style = MaterialTheme.typography.bodySmall) }
                     Text("Ver oportunidade", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 }
             }

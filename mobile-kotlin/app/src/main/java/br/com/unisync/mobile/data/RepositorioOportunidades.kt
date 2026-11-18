@@ -8,11 +8,12 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.Instant
 
 class RepositorioOportunidades(private val dao: OportunidadeDao, private val api: ClienteAcademico) : Oportunidades {
     private val operacao = Mutex()
     override val itens = dao.observar().map { lista -> lista.map {
-        Oportunidade(it.id, it.titulo, it.professor, it.materia, it.descricao, it.tipo, it.dataEvento, it.professorId)
+        Oportunidade(it.id, it.titulo, it.professor, it.materia, it.descricao, it.tipo, it.dataEvento, it.professorId, it.urlInscricao, it.prazoInscricao?.let(Instant::parse))
     } }
     override suspend fun atualizar(token: String) = operacao.withLock {
         // O contrato atual oferece limite, sem cursor/página. A UI informa esse recorte.
@@ -41,6 +42,8 @@ class RepositorioOportunidades(private val dao: OportunidadeDao, private val api
         return JSONObject().put("titulo", validado.titulo).put("materia", validado.materia)
             .put("tipo", validado.tipo).put("descricao", validado.descricao)
             .put("data_evento", validado.dataParaApi())
+            .put("url_inscricao", validado.urlInscricao ?: JSONObject.NULL)
+            .put("prazo_inscricao", validado.prazoInscricao?.toString() ?: JSONObject.NULL)
     }
     private fun identificador(id: String): String {
         require(id.matches(Regex("[a-fA-F0-9]{24}"))) { "Identificador de oportunidade inválido." }
@@ -49,5 +52,7 @@ class RepositorioOportunidades(private val dao: OportunidadeDao, private val api
     private fun local(json: JSONObject) = OportunidadeLocal(identificador(json.getString("id")),
         json.getString("titulo"), json.getString("professor"), json.getString("materia"),
         if (json.isNull("descricao")) null else json.getString("descricao"), json.getString("tipo"),
-        json.getString("data_evento"), if (json.isNull("professor_id")) null else json.getString("professor_id"))
+        json.getString("data_evento"), if (json.isNull("professor_id")) null else json.getString("professor_id"),
+        if (json.isNull("url_inscricao")) null else json.getString("url_inscricao"),
+        if (json.isNull("prazo_inscricao")) null else Instant.parse(json.getString("prazo_inscricao")).toString())
 }
