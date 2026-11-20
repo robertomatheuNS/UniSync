@@ -20,6 +20,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 import java.util.UUID
+import java.util.concurrent.atomic.AtomicReference
 
 class MuralLocalE2ETest {
     @get:Rule val compose = createAndroidComposeRule<AtividadeTeste>()
@@ -40,6 +41,7 @@ class MuralLocalE2ETest {
         val fora = cadastrar("Conta sem matrícula", "fora-mural")
         val academico = RepositorioAcademico()
         val repo = RepositorioMural()
+        val interacoes = RepositorioInteracoesMural()
         val api = ClienteAcademico()
         val turma = runBlocking {
             academico.criarTurma(professor.token, DadosTurma("Turma Mural", "Engenharia de Software")).also {
@@ -51,12 +53,27 @@ class MuralLocalE2ETest {
         val modeloAluno = ModeloMural(repo, aluno.token, aluno.usuarioId) { expirou = true }
         val modeloProfessor = ModeloMural(repo, professor.token, professor.usuarioId) { expirou = true }
         var professorAtivo by mutableStateOf(false)
+        val conversaAtual = AtomicReference<ModeloConversa?>()
+        fun esperarConversa() {
+            compose.waitUntil(15000) { conversaAtual.get()?.estado?.value?.let { !it.lendo && !it.ocupado } == true }
+            assertNull(conversaAtual.get()!!.estado.value.erro)
+        }
         try {
             compose.setContent { TemaUniSync {
                 val modelo = if (professorAtivo) modeloProfessor else modeloAluno
                 val estado by modelo.estado.collectAsState()
+                val sessao = if (professorAtivo) professor else aluno
+                val conversa = remember(professorAtivo, estado.detalhe?.id) { estado.detalhe?.let { pub ->
+                    ModeloConversa(interacoes, sessao.token, sessao.usuarioId, pub, { expirou = true }, modelo::atualizarCurtida,
+                        { erro -> modelo.interacaoIndisponivel(pub.id, erro) })
+                } }
+                DisposableEffect(conversa) { onDispose { conversa?.fechar() } }
+                SideEffect { conversaAtual.set(conversa) }
+                val estadoConversa = conversa?.estado?.collectAsState()?.value
                 key(professorAtivo) { TelaMural(estado, listOf(turma), { modelo.atualizar() }, modelo::atualizar, modelo::carregarMais,
-                    modelo::abrir, modelo::fecharDetalhe, modelo::salvar, modelo::excluir, {}) }
+                    modelo::abrir, modelo::fecharDetalhe, modelo::salvar, modelo::excluir, {}, estadoConversa,
+                    { conversa?.atualizar() }, { conversa?.carregarMais() }, { id, versao, texto -> conversa?.salvar(id, versao, texto) },
+                    { conversa?.excluir(it) }, { conversa?.curtir(it) }) }
             } }
             esperar(modeloAluno); esperar(modeloProfessor)
             compose.onNode(hasText("Nova publicação") and hasClickAction()).performClick()
@@ -67,7 +84,48 @@ class MuralLocalE2ETest {
             assertNull(modeloAluno.estado.value.erro)
             val item = modeloAluno.estado.value.detalhe!!
             assertEquals(aluno.usuarioId, item.autorId)
+            esperarConversa()
             capturar("mural-publicacao-aluno.png")
+            rolarConversa("Curtir (0)"); compose.onNodeWithText("Curtir (0)").performClick()
+            compose.waitUntil(15000) { conversaAtual.get()?.estado?.value?.curtiu == true && conversaAtual.get()?.estado?.value?.curtindo == false }
+            runBlocking {
+                assertEquals(1, interacoes.curtir(aluno.token, item.id, true).total)
+                assertEquals(1, interacoes.curtir(aluno.token, item.id, true).total)
+                assertEquals(1, repo.buscar(aluno.token, item.id).versao)
+            }
+            rolarConversa("Seu comentário"); compose.onNodeWithText("Seu comentário").performTextInput("Minha dúvida inicial")
+            compose.onNodeWithText("Enviar comentário").assertIsDisplayed().performClick()
+            compose.waitUntil(15000) { conversaAtual.get()?.estado?.value?.confirmacaoSalvo == 1 && conversaAtual.get()?.estado?.value?.salvando == false }
+            val comentarioOriginal = conversaAtual.get()!!.estado.value.comentarios.single()
+            runBlocking {
+                assertEquals("Minha dúvida inicial", interacoes.listarComentarios(aluno.token, item.id, null).itens.single().conteudo)
+                assertEquals(403, (runCatching { interacoes.editarComentario(colega.token, item.id, comentarioOriginal.id, 1, "Indevido") }.exceptionOrNull() as? FalhaApi)?.status)
+                assertEquals(403, (runCatching { interacoes.curtir(fora.token, item.id, true) }.exceptionOrNull() as? FalhaApi)?.status)
+                assertEquals(403, (runCatching { interacoes.listarComentarios(fora.token, item.id, null) }.exceptionOrNull() as? FalhaApi)?.status)
+                repeat(20) { numero -> interacoes.comentar(colega.token, item.id, "Comentário paginado $numero") }
+            }
+            rolarConversa("Atualizar conversa"); compose.onNodeWithText("Atualizar conversa").performClick(); esperarConversa()
+            assertEquals(20, conversaAtual.get()!!.estado.value.comentarios.size)
+            rolarConversa("Carregar mais comentários"); compose.onNodeWithText("Carregar mais comentários").performClick()
+            compose.waitUntil(15000) { conversaAtual.get()?.estado?.value?.comentarios?.size == 21 && conversaAtual.get()?.estado?.value?.carregandoMais == false }
+            assertEquals(21, conversaAtual.get()!!.estado.value.comentarios.map { it.id }.distinct().size)
+            runBlocking { interacoes.editarComentario(aluno.token, item.id, comentarioOriginal.id, 1, "Revisão de outro cliente") }
+            rolarConversa("Editar comentário"); compose.onNode(hasText("Editar comentário") and hasClickAction()).performClick()
+            compose.onNode(hasSetTextAction()).performTextReplacement("Meu comentário em conflito")
+            compose.onNodeWithText("Salvar comentário").assertIsDisplayed().performClick()
+            compose.waitUntil(15000) { conversaAtual.get()?.estado?.value?.erro != null && conversaAtual.get()?.estado?.value?.salvando == false }
+            compose.onNode(hasSetTextAction()).assertTextContains("Meu comentário em conflito")
+            assertEquals(1, conversaAtual.get()!!.estado.value.confirmacaoSalvo)
+            compose.onNodeWithText("Cancelar edição").performScrollTo().performClick(); compose.onNodeWithText("Descartar").performClick()
+            rolarConversa("Atualizar conversa"); compose.onNodeWithText("Atualizar conversa").performClick(); esperarConversa()
+            rolarConversa("Carregar mais comentários"); compose.onNodeWithText("Carregar mais comentários").performClick()
+            compose.waitUntil(15000) { conversaAtual.get()?.estado?.value?.comentarios?.size == 21 && conversaAtual.get()?.estado?.value?.carregandoMais == false }
+            rolarConversa("Editar comentário"); compose.onNode(hasText("Editar comentário") and hasClickAction()).performClick()
+            compose.onNode(hasSetTextAction()).performTextReplacement("Minha dúvida revisada")
+            compose.onNodeWithText("Salvar comentário").assertIsDisplayed().performClick()
+            compose.waitUntil(15000) { conversaAtual.get()?.estado?.value?.confirmacaoSalvo == 2 && conversaAtual.get()?.estado?.value?.salvando == false }
+            assertEquals(3, conversaAtual.get()!!.estado.value.comentarios.first { it.id == comentarioOriginal.id }.versao)
+            capturar("mural-conversa-aluno.png")
             runBlocking {
                 assertFalse(repo.buscar(colega.token, item.id).podeEditar)
                 assertFalse(repo.buscar(colega.token, item.id).podeExcluir)
@@ -79,7 +137,8 @@ class MuralLocalE2ETest {
                 val corpo = JSONObject().put("titulo", item.titulo).put("conteudo", "Revisão feita por outro cliente").put("versao", 1)
                 api.executar("PATCH", "/mural/atualizar/${item.id}", aluno.token, corpo.toString())
             }
-            compose.onNodeWithText("Editar publicação").performScrollTo().performClick()
+            esperarConversa()
+            rolarConversa("Editar publicação"); compose.onNodeWithText("Editar publicação").performClick()
             compose.onNodeWithText("Título da publicação").performTextReplacement("Rascunho em conflito")
             compose.onNodeWithText("Salvar publicação").performClick()
             compose.waitUntil(15000) { !modeloAluno.estado.value.salvando && modeloAluno.estado.value.erro != null }
@@ -90,7 +149,8 @@ class MuralLocalE2ETest {
             modeloAluno.atualizar(); esperar(modeloAluno)
             modeloAluno.abrir(item.id)
             compose.waitUntil(15000) { !modeloAluno.estado.value.carregandoDetalhe && modeloAluno.estado.value.detalhe?.versao == 2 }
-            compose.onNodeWithText("Editar publicação").performScrollTo().performClick()
+            esperarConversa()
+            rolarConversa("Editar publicação"); compose.onNodeWithText("Editar publicação").performClick()
             compose.onNodeWithText("Título da publicação").performTextReplacement("Projeto revisado Android")
             compose.onNodeWithText("Salvar publicação").performClick()
             compose.waitUntil(15000) { !modeloAluno.estado.value.salvando && modeloAluno.estado.value.detalhe?.versao == 3 }
@@ -106,17 +166,30 @@ class MuralLocalE2ETest {
             modeloProfessor.abrir(item.id)
             compose.waitUntil(15000) { !modeloProfessor.estado.value.carregandoDetalhe && modeloProfessor.estado.value.detalhe != null }
             compose.runOnIdle { professorAtivo = true }
+            esperarConversa()
             compose.onNodeWithText("Editar publicação").assertDoesNotExist()
-            compose.onNodeWithText("Excluir publicação").performScrollTo().performClick()
+            val moderado = conversaAtual.get()!!.estado.value.comentarios.first()
+            assertTrue(moderado.podeExcluir); assertFalse(moderado.podeEditar)
+            compose.onNode(hasScrollAction() and hasAnyAncestor(isDialog())).performScrollToNode(hasTestTag("comentario:${moderado.id}"))
+            compose.onNode(hasText("Excluir comentário") and hasAnyAncestor(hasTestTag("comentario:${moderado.id}"))).performScrollTo().performClick()
+            compose.onNodeWithText("Excluir").performClick()
+            compose.waitUntil(15000) { conversaAtual.get()?.estado?.value?.confirmacaoExcluido == 1 && conversaAtual.get()?.estado?.value?.salvando == false }
+            runBlocking { assertTrue(interacoes.listarComentarios(aluno.token, item.id, null).itens.none { it.id == moderado.id }) }
+            rolarConversa("Excluir publicação"); compose.onNodeWithText("Excluir publicação").performClick()
             compose.onNodeWithText("Excluir").performClick()
             compose.waitUntil(15000) { !modeloProfessor.estado.value.salvando && modeloProfessor.estado.value.confirmacao == 1 }
-            runBlocking { assertEquals(404, (runCatching { repo.buscar(aluno.token, item.id) }.exceptionOrNull() as? FalhaApi)?.status) }
+            runBlocking {
+                assertEquals(404, (runCatching { repo.buscar(aluno.token, item.id) }.exceptionOrNull() as? FalhaApi)?.status)
+                assertEquals(404, (runCatching { interacoes.curtir(aluno.token, item.id, true) }.exceptionOrNull() as? FalhaApi)?.status)
+                assertEquals(404, (runCatching { interacoes.listarComentarios(aluno.token, item.id, null) }.exceptionOrNull() as? FalhaApi)?.status)
+            }
             compose.onNode(hasText("Nova publicação") and hasClickAction()).performScrollTo().performClick()
             compose.onNodeWithText("Título da publicação").performTextInput("Organização da apresentação")
             compose.onNodeWithText("Conteúdo da publicação").performScrollTo().performTextInput("Compartilhem suas ideias para a próxima aula.")
             compose.onNodeWithText("Salvar publicação").performClick()
             compose.waitUntil(15000) { !modeloProfessor.estado.value.salvando && modeloProfessor.estado.value.confirmacao == 2 }
             val publicacaoProfessor = modeloProfessor.estado.value.detalhe!!
+            esperarConversa()
             capturar("mural-publicacao-professor.png")
             runBlocking {
                 val leitura = repo.buscar(aluno.token, publicacaoProfessor.id)
@@ -124,6 +197,7 @@ class MuralLocalE2ETest {
                 academico.arquivarTurma(professor.token, turma.id); arquivada = true
                 assertTrue(repo.listar(aluno.token, null, null).itens.isEmpty())
                 assertEquals(404, (runCatching { repo.buscar(aluno.token, publicacaoProfessor.id) }.exceptionOrNull() as? FalhaApi)?.status)
+                assertEquals(404, (runCatching { interacoes.comentar(aluno.token, publicacaoProfessor.id, "Arquivada") }.exceptionOrNull() as? FalhaApi)?.status)
             }
             assertFalse(expirou)
         } finally {
@@ -135,6 +209,7 @@ class MuralLocalE2ETest {
         compose.waitUntil(15000) { !modelo.estado.value.lendo && !modelo.estado.value.atualizando }
         assertNull(modelo.estado.value.erro)
     }
+    private fun rolarConversa(texto: String) { compose.onNode(hasScrollAction() and hasAnyAncestor(isDialog())).performScrollToNode(hasText(texto)) }
     private fun capturar(nome: String) {
         File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, nome).outputStream().use {
             compose.onNode(isDialog()).captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)

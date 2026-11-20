@@ -158,7 +158,7 @@ Para executar os testes sem E2E usando Docker:
 docker compose run --rm --build --no-deps api python -m pytest -m "not e2e" -v
 ```
 
-**Validação do mural:** 137 testes unitários e HTTP aprovados, excluindo o teste Pytest marcado como E2E.
+**Validação do mural:** 162 testes unitários e HTTP aprovados, excluindo o teste Pytest marcado como E2E.
 
 ### Teste de integração E2E
 
@@ -185,7 +185,7 @@ Estão implementados CRUD de oportunidades, tarefas e lembretes, turmas com matr
 
 Os fluxos Android usam as APIs locais diretamente. O script `../mobile-kotlin/scripts/testar-academico-local.sh` valida os ciclos reais de turmas, avisos, tarefas, lembretes e mural com contas técnicas. O teste Pytest E2E de oportunidades descrito acima é um roteiro separado e exige suas próprias variáveis de ambiente.
 
-Continuam previstas a evolução do mural com comentários/interações e a definição de eventos remotos e notificações push. A existência desses itens no plano não significa que já façam parte dos contratos publicados.
+O mural inclui comentários com edição e moderação e curtidas individuais. Continuam previstas a definição de eventos remotos, anexos e notificações push. A existência desses itens no plano não significa que já façam parte dos contratos publicados.
 
 ## Mural colaborativo por turma
 
@@ -207,4 +207,23 @@ Cada resumo contém `id`, `turma_id`, `turma_nome`, `disciplina`, `autor_id`, `a
 
 Edição e exclusão conferem a versão atomicamente. Uma revisão desatualizada recebe **409**, sem sobrescrever ou remover a versão nova. A exclusão retira o item das consultas e registra internamente quem o removeu. Falta de acesso retorna **403**; publicação removida ou turma arquivada retorna **404**.
 
-Esta entrega inclui publicações de texto, filtro e paginação. Comentários, reações, anexos e push não fazem parte deste contrato.
+Esta entrega inclui publicações de texto, comentários, curtidas individuais, filtros e paginação. Anexos e push não fazem parte deste contrato.
+
+### Comentários e curtidas
+
+| Método | Rota | Uso |
+|---|---|---|
+| GET | `/mural/{publicacao_id}/curtida` | Total de curtidas e estado do usuário atual |
+| PUT | `/mural/{publicacao_id}/curtida` | Definir `{ "curtiu": true }` ou `{ "curtiu": false }` |
+| GET | `/mural/{publicacao_id}/comentarios` | Página de comentários; aceita `antes` e `limite` (1–50, padrão 20) |
+| POST | `/mural/{publicacao_id}/comentarios` | Criar com `{ "conteudo": "texto" }` |
+| PATCH | `/mural/{publicacao_id}/comentarios/{id}` | Editar com `conteudo` e `versao` |
+| DELETE | `/mural/{publicacao_id}/comentarios/{id}?versao=1` | Remover a versão confirmada |
+
+O comentário deve ter de 1 a 2000 caracteres, após remover espaços nas extremidades. Sua autoria é extraída do JWT. Somente o autor edita o texto; o autor ou o professor responsável pela turma pode removê-lo. A versão é conferida atomicamente e uma revisão antiga recebe 409. Comentários são ordenados por identificador decrescente e retornam `itens` e `proxima_pagina`.
+
+Cada comentário contém `id`, `publicacao_id`, `autor_id`, `autor`, `papel_autor`, `conteudo`, `criado_em`, `atualizado_em`, `versao`, `pode_editar` e `pode_excluir`. Os horários são expostos em UTC com fuso explícito. A remoção da publicação ou o arquivamento da turma bloqueia também comentários e curtidas; um comentário não pode ser acessado por outra publicação.
+
+A curtida usa operações atômicas e idempotentes: repetir o mesmo PUT não duplica nem alterna a reação. A resposta contém apenas `publicacao_id`, `total_curtidas` e `curtiu`, sem expor a lista de usuários. Os resumos e detalhes da publicação também incluem `total_curtidas` e `curtiu`. Alterar uma curtida não incrementa a versão do texto da publicação.
+
+O Android só limpa o rascunho de comentário após confirmação do servidor; curtir não apaga o texto. A conversa utiliza lista com paginação e mantém o texto e sua versão ao recriar a tela. As leituras ficam na memória da sessão; esta etapa não implementa cache persistente ou sincronização remota em segundo plano para o mural.

@@ -95,6 +95,11 @@ class ModeloMural(private val repo: Mural, private val token: String, private va
         repo.excluir(token, item.id, item.versao)
         _estado.update { it.copy(itens = it.itens.filterNot { publicacao -> publicacao.id == item.id }, detalhe = null, abrindoId = null) }
     }
+    fun atualizarCurtida(curtida: Curtida) {
+        _estado.update { atual -> atual.copy(itens = atual.itens.map { if (it.id == curtida.publicacaoId) it.copy(totalCurtidas = curtida.total, curtiu = curtida.curtiu) else it },
+            detalhe = atual.detalhe?.let { if (it.id == curtida.publicacaoId) it.copy(totalCurtidas = curtida.total, curtiu = curtida.curtiu) else it }) }
+    }
+    fun interacaoIndisponivel(id: String, erro: FalhaApi) { if (_estado.value.abrindoId == id) falha(erro, detalhe = true) }
     fun limparMensagem() { _estado.update { it.copy(erro = null, mensagem = null) } }
     private fun escrever(mensagem: String, acao: suspend () -> Unit) {
         if (_estado.value.salvando || _estado.value.atualizando || _estado.value.carregandoMais || _estado.value.carregandoDetalhe) return
@@ -114,12 +119,15 @@ class ModeloMural(private val repo: Mural, private val token: String, private va
             erro is IllegalArgumentException -> erro.message
             else -> "Não foi possível atualizar o mural. O conteúdo já carregado permanece disponível. Confira a conexão e tente novamente."
         }
+        val negado = erro is FalhaApi && erro.status in listOf(403, 404)
+        if (negado) { consulta?.cancel(); geracao++ }
         _estado.update { atual ->
-            val negado = erro is FalhaApi && erro.status in listOf(403, 404)
             val turmaNegada = if (detalhe) atual.itens.find { it.id == atual.abrindoId }?.turmaId else null
             atual.copy(erro = if (detalhe) atual.erro else mensagem, erroDetalhe = if (detalhe) mensagem else atual.erroDetalhe,
                 itens = if (negado) { if (turmaNegada != null) atual.itens.filterNot { it.turmaId == turmaNegada } else emptyList() } else atual.itens,
-                detalhe = if (negado) null else atual.detalhe, proximaPagina = if (negado) null else atual.proximaPagina)
+                detalhe = if (negado) null else atual.detalhe, proximaPagina = if (negado) null else atual.proximaPagina,
+                lendo = if (negado) false else atual.lendo, atualizando = if (negado) false else atual.atualizando,
+                carregandoMais = if (negado) false else atual.carregandoMais)
         }
     }
     fun fechar() { viewModelScope.cancel() }

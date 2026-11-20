@@ -94,6 +94,17 @@ class ModeloMuralTest {
         advanceUntilIdle(); assertEquals(1, modelo.estado.value.confirmacao)
         modelo.fechar()
     }
+    @Test fun respostaAntigaNaoRestauraPublicacaoAposInteracaoNegarAcesso() = runTest(dispatcher) {
+        val pendente = CompletableDeferred<PaginaPublicacoes>()
+        val repo = Fake().apply { lista = { _, _ -> withContext(NonCancellable) { pendente.await() } } }
+        val modelo = ModeloMural(repo, "token", "eu") {}; runCurrent()
+        modelo.abrir(repo.detalhe.id); runCurrent()
+        modelo.interacaoIndisponivel(repo.detalhe.id, FalhaApi(403, "Sem acesso"))
+        pendente.complete(PaginaPublicacoes(listOf(item()), null)); runCurrent()
+        assertTrue(modelo.estado.value.itens.isEmpty()); assertNull(modelo.estado.value.detalhe)
+        assertFalse(modelo.estado.value.atualizando); assertNotNull(modelo.estado.value.erroDetalhe)
+        modelo.fechar()
+    }
     @Test fun tokenRecusadoSolicitaNovaSessao() = runTest(dispatcher) {
         var expirou = false
         val modelo = ModeloMural(Fake().apply { falha = FalhaApi(401, "Expirou") }, "token", "eu") { expirou = true }

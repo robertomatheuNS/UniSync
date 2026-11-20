@@ -32,6 +32,8 @@ class ResumoPublicacao(BaseModel):
     versao: int
     pode_editar: bool
     pode_excluir: bool
+    total_curtidas: int = 0
+    curtiu: bool = False
 
     @field_validator("criado_em", "atualizado_em")
     @classmethod

@@ -39,5 +39,6 @@ class RepositorioMural(private val api: ClienteAcademico = ClienteAcademico()) :
         json.getString("turma_nome"), json.getString("disciplina"), json.getString("autor_id"), json.getString("autor"), json.getString("papel_autor"),
         json.getString("titulo"), json.getString("resumo"), Instant.parse(json.getString("criado_em")), Instant.parse(json.getString("atualizado_em")),
         json.getInt("versao").also { require(it > 0) }, json.getBoolean("pode_editar"), json.getBoolean("pode_excluir"),
-        if (json.isNull("conteudo")) null else json.getString("conteudo"))
+        if (json.isNull("conteudo")) null else json.getString("conteudo"),
+        json.optInt("total_curtidas", 0).also { require(it >= 0) }, json.optBoolean("curtiu", false))
 }

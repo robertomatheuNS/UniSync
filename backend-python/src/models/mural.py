@@ -13,6 +13,7 @@ class Publicacao(Document):
     conteudo: str
     criado_em: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     atualizado_em: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    curtidas: list[str] = Field(default_factory=list)
     versao: int = 1
     excluida: bool = False
     excluida_por: str | None = None
