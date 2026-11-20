@@ -6,6 +6,7 @@ import { KANBAN_COLUMNS } from '@/constants/kanban'
 import TaskDropZone from '@/components/kanban/TaskDropZone.vue'
 import BaseModal from '@/components/base/BaseModal.vue'
 import trashIcon from '@/assets/icons/trash.svg'
+import { api } from '@/services/api'
 const aluno = computed(() => obterSessao()?.papel === 'Aluno')
 const {
   tasks,
@@ -21,16 +22,27 @@ const {
 const titulo = ref(''),
   editando = ref(null),
   excluindo = ref(null),
-  novoTitulo = ref('')
+  novoTitulo = ref(''),
+  prioridade = ref('MEDIA'),
+  prazo = ref(''),
+  turmaId = ref(''),
+  turmas = ref([]),
+  erroTurmas = ref('')
+const campos = () => ({ prioridade: prioridade.value, prazo: prazo.value || null, turma_id: turmaId.value || null })
 async function adicionar() {
-  if (await addTask(titulo.value)) titulo.value = ''
+  if (await addTask({ titulo: titulo.value, ...campos() })) {
+    titulo.value = ''; prioridade.value = 'MEDIA'; prazo.value = ''; turmaId.value = ''
+  }
 }
 function abrirEdicao(tarefa) {
   editando.value = tarefa
   novoTitulo.value = tarefa.title
+  prioridade.value = tarefa.prioridade
+  prazo.value = tarefa.prazo ?? ''
+  turmaId.value = tarefa.turma_id ?? ''
 }
 async function salvar() {
-  if (await editTask(editando.value.id, novoTitulo.value)) editando.value = null
+  if (await editTask(editando.value.id, { titulo: novoTitulo.value, ...campos() })) editando.value = null
 }
 function mover(id, coluna) {
   if (coluna === 'trash') excluindo.value = tasks.value.find((t) => t.id === id)
@@ -40,7 +52,10 @@ async function excluir() {
   if (await deleteTask(excluindo.value.id)) excluindo.value = null
 }
 onMounted(() => {
-  if (aluno.value) loadTasks()
+  if (aluno.value) {
+    loadTasks()
+    api('/turmas/listar').then((dados) => { turmas.value = dados }).catch((falha) => { erroTurmas.value = falha.message })
+  }
 })
 </script>
 <template>
@@ -73,10 +88,23 @@ onMounted(() => {
           pattern=".*\S.*"
           :disabled="loading"
           placeholder="Ex.: Revisar a aula de hoje"
-        /><button class="botao botao--principal" :disabled="loading">
+        />
+        <label for="nova-prioridade">Prioridade</label>
+        <select id="nova-prioridade" v-model="prioridade" :disabled="loading">
+          <option value="BAIXA">Baixa</option><option value="MEDIA">Média</option><option value="ALTA">Alta</option>
+        </select>
+        <label for="novo-prazo">Prazo</label>
+        <input id="novo-prazo" v-model="prazo" type="date" :disabled="loading" />
+        <label for="nova-turma">Turma</label>
+        <select id="nova-turma" v-model="turmaId" :disabled="loading || !!erroTurmas">
+          <option value="">Sem turma</option>
+          <option v-for="turma in turmas" :key="turma.id" :value="turma.id">{{ turma.disciplina }} · {{ turma.nome }}</option>
+        </select>
+        <button class="botao botao--principal" :disabled="loading">
           Adicionar
         </button>
       </form>
+      <p v-if="erroTurmas" role="alert">Turmas indisponíveis. {{ erroTurmas }}</p>
       <p v-if="loading" role="status">Salvando ou carregando tarefas…</p>
       <div class="kanban-grid">
         <section
@@ -96,6 +124,7 @@ onMounted(() => {
               class="tarefa-arrastavel"
             >
               <p>{{ tarefa.title }}</p>
+              <p>Prioridade {{ { BAIXA: 'baixa', MEDIA: 'média', ALTA: 'alta' }[tarefa.prioridade] }}<span v-if="tarefa.prazo"> · Prazo {{ tarefa.prazo.split('-').reverse().join('/') }}</span><span v-if="tarefa.disciplina"> · {{ tarefa.disciplina }}</span></p>
               <div class="tarefa-acoes">
                 <button
                   :disabled="loading"
@@ -152,6 +181,12 @@ onMounted(() => {
           pattern=".*\S.*"
           :disabled="loading"
         />
+        <label for="editar-prioridade">Prioridade</label>
+        <select id="editar-prioridade" v-model="prioridade" :disabled="loading"><option value="BAIXA">Baixa</option><option value="MEDIA">Média</option><option value="ALTA">Alta</option></select>
+        <label for="editar-prazo">Prazo</label>
+        <input id="editar-prazo" v-model="prazo" type="date" :disabled="loading" />
+        <label for="editar-turma">Turma</label>
+        <select id="editar-turma" v-model="turmaId" :disabled="loading || !!erroTurmas"><option value="">Sem turma</option><option v-for="turma in turmas" :key="turma.id" :value="turma.id">{{ turma.disciplina }} · {{ turma.nome }}</option></select>
         <p v-if="error" role="alert">{{ error }}</p>
         <button class="botao botao--principal" :disabled="loading">
           Salvar
