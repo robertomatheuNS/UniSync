@@ -1,6 +1,7 @@
 from src.models.oportunidade import Oportunidade
 from beanie import PydanticObjectId
 from datetime import datetime, timezone
+from pymongo import ReturnDocument
 
 async def criar_oportunidade(oportunidade: Oportunidade):
     await oportunidade.insert()
@@ -40,17 +41,22 @@ async def listar_oportunidades(
 async def buscar_oportunidade_por_id(oportunidade_id: PydanticObjectId):
     return await Oportunidade.get(oportunidade_id)
 
-async def atualizar_oportunidade(
-    oportunidade: Oportunidade,
-    novos_dados: dict
-    
-):
-    for chave, valor in novos_dados.items():
-        setattr(oportunidade, chave, valor)
+async def atualizar_oportunidade(oportunidade: Oportunidade, novos_dados: dict):
+    filtro = {"_id": oportunidade.id, "professor_id": oportunidade.professor_id}
+    # Protege a relação entre datas em edições parciais concorrentes.
+    if "data_evento" in novos_dados and "prazo_inscricao" not in novos_dados:
+        filtro["prazo_inscricao"] = oportunidade.prazo_inscricao
+    elif "prazo_inscricao" in novos_dados and "data_evento" not in novos_dados:
+        filtro["data_evento"] = oportunidade.data_evento
+    item = await Oportunidade.get_pymongo_collection().find_one_and_update(
+        filtro, {"$set": novos_dados}, return_document=ReturnDocument.AFTER,
+    )
+    if item is not None:
+        return Oportunidade.model_validate(item)
+    if await buscar_oportunidade_por_id(oportunidade.id) is not None:
+        raise ValueError("As datas foram alteradas por outro cliente. Atualize e tente novamente")
+    return None
 
-    await oportunidade.save()
-
-    return oportunidade
 
 async def excluir_oportunidade(oportunidade: Oportunidade):
     await oportunidade.delete()

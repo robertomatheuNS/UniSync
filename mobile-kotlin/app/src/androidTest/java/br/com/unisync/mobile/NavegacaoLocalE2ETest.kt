@@ -54,6 +54,8 @@ class NavegacaoLocalE2ETest {
         arquivo.outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG,100,it) }
         compose.onNode(hasContentDescription("Oportunidades") and hasClickAction()).performClick()
         compose.onNodeWithText("Buscar oportunidades").assertExists()
+        compose.onNode(hasContentDescription("Início") and hasClickAction()).performClick()
+        compose.onNodeWithText("Olá, Teste Interface").assertExists()
         compose.onNode(hasText("Perfil") and hasClickAction()).performClick()
         compose.onNodeWithText("Usar tema do sistema").assertExists()
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Lembretes: desativados"))

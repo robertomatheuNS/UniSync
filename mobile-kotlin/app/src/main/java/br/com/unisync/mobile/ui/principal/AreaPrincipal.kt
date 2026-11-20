@@ -131,7 +131,10 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
     }) },
         bottomBar = { NavigationBar { destinos.forEachIndexed { indice, destino ->
             NavigationBarItem(selected = rota == destino.rota, onClick = {
-                nav.navigate(destino.rota) {
+                if (destino.rota == rota) return@NavigationBarItem
+                if (destino.rota == "inicio") {
+                    if (!nav.popBackStack("inicio", inclusive = false)) nav.navigate("inicio")
+                } else nav.navigate(destino.rota) {
                     popUpTo(nav.graph.findStartDestination().id) { saveState = true }
                     launchSingleTop = true; restoreState = true
                 }

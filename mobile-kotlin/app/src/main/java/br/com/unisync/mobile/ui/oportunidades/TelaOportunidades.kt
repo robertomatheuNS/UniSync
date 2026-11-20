@@ -1,5 +1,7 @@
 package br.com.unisync.mobile.ui.oportunidades
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,18 +11,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import br.com.unisync.mobile.domain.oportunidades.Oportunidade
-import br.com.unisync.mobile.domain.oportunidades.DadosOportunidade
+import androidx.core.net.toUri
+import br.com.unisync.mobile.domain.oportunidades.*
 import br.com.unisync.mobile.ui.componentes.*
 import br.com.unisync.mobile.domain.lembretes.Lembrete
 import br.com.unisync.mobile.ui.lembretes.*
 import java.time.ZoneId
+import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import java.util.Locale
+import kotlinx.coroutines.delay
 
 @Composable
 fun TelaOportunidades(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
@@ -105,7 +110,9 @@ private fun CartaoOportunidade(item: Oportunidade, aoAbrir: () -> Unit) {
             Text(item.titulo, style = MaterialTheme.typography.titleMedium)
             Text(item.dataFormatada())
             Text("${item.materia} • ${item.professor}", style = MaterialTheme.typography.bodyMedium)
-            if (item.encerrada()) Text("Evento já realizado", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (item.prazoInscricao != null || item.encerrada()) {
+                Text(item.situacaoInscricao(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -113,11 +120,48 @@ private fun CartaoOportunidade(item: Oportunidade, aoAbrir: () -> Unit) {
 @Composable
 private fun DetalheOportunidade(item: Oportunidade, podeEditar: Boolean = false, ocupado: Boolean = false,
     aoEditar: () -> Unit = {}, aoExcluir: () -> Unit = {}, aoFechar: () -> Unit) {
+    val contexto = LocalContext.current
+    val link = remember(item.urlInscricao) { runCatching { validarUrlInscricao(item.urlInscricao) }.getOrNull() }
+    var erroAcao by remember(item.id) { mutableStateOf<String?>(null) }
+    val agora by produceState(Instant.now(), item.id, item.prazoInscricao) {
+        while (true) {
+            value = Instant.now()
+            delay(1000)
+        }
+    }
     AlertDialog(onDismissRequest = aoFechar, title = { Text(item.titulo) },
         text = { Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(item.tipo); Text(item.dataFormatada()); Text(item.materia); Text("Professor: ${item.professor}")
+            Text(item.tipo)
+            Text("Evento: ${item.dataFormatada()}")
+            Text(item.materia)
+            Text("Professor: ${item.professor}")
             Text(item.descricao?.takeIf { it.isNotBlank() } ?: "Nenhuma descrição informada.")
-            if (item.encerrada()) Text("Evento já realizado")
+            item.prazoFormatado()?.let { Text("Prazo de inscrição: $it") }
+            Text(item.situacaoInscricao(agora))
+            if (link != null && item.podeInscrever(agora)) {
+                val uri = link.toUri()
+                Text("Site da inscrição: ${uri.host}", style = MaterialTheme.typography.bodySmall)
+                Button(onClick = {
+                    erroAcao = null
+                    if (item.podeInscrever()) {
+                        try {
+                            contexto.startActivity(Intent(Intent.ACTION_VIEW, uri).addCategory(Intent.CATEGORY_BROWSABLE))
+                        } catch (_: ActivityNotFoundException) {
+                            erroAcao = "Nenhum aplicativo pode abrir o site da inscrição."
+                        }
+                    } else erroAcao = "O prazo de inscrição ou do evento já passou."
+                }) { Text("Abrir site de inscrição") }
+            } else if (link == null && item.prazoInscricao != null && !item.inscricoesEncerradas(agora)) {
+                Text("Link de inscrição não informado.")
+            }
+            OutlinedButton(onClick = {
+                erroAcao = null
+                val enviar = Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT, item.textoParaCompartilhar())
+                try { contexto.startActivity(Intent.createChooser(enviar, "Compartilhar oportunidade")) }
+                catch (_: ActivityNotFoundException) { erroAcao = "O compartilhamento está indisponível neste aparelho." }
+            }) { Text("Compartilhar oportunidade") }
+            erroAcao?.let { MensagemDeErro(it) }
             if (podeEditar) {
                 OutlinedButton(enabled = !ocupado, onClick = aoEditar) { Text("Editar oportunidade") }
                 TextButton(enabled = !ocupado, onClick = aoExcluir) { Text("Excluir oportunidade", color = MaterialTheme.colorScheme.error) }
@@ -143,14 +187,18 @@ fun TelaCalendario(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
         else -> YearMonth.from(data) == periodo
     }
     val eventos = estado.itens.filter { it.horario()?.toLocalDate()?.let(::noPeriodo) == true }.sortedBy { it.horario() }
+    val zona = ZoneId.systemDefault()
+    val inscricoes = estado.itens.mapNotNull { item ->
+        item.prazoInscricao?.atZone(zona)?.takeIf { noPeriodo(it.toLocalDate()) }?.let { it to item }
+    }.sortedBy { it.first.toInstant() }.groupBy { it.first.toLocalDate() }
     val prazos = tarefas?.itens.orEmpty().filter { it.prazo?.let(::noPeriodo) == true }
     fun diaLembrete(item: Lembrete) = item.agendadoEm?.atZone(ZoneId.systemDefault())?.toLocalDate()
     val agendados = lembretes?.itens.orEmpty().filter { diaLembrete(it)?.let(::noPeriodo) == true }.sortedBy { it.agendadoEm }
-    val datas = (eventos.mapNotNull { it.horario()?.toLocalDate() } + prazos.mapNotNull { it.prazo } + agendados.mapNotNull(::diaLembrete)).distinct().sorted()
+    val datas = (eventos.mapNotNull { it.horario()?.toLocalDate() } + prazos.mapNotNull { it.prazo } + agendados.mapNotNull(::diaLembrete) + inscricoes.keys).distinct().sorted()
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { CabecalhoOportunidades(estado, aoAtualizar) }
         item { Text(if (tarefas == null && lembretes == null) "Agenda dos eventos publicados" else "Sua agenda acadêmica", style = MaterialTheme.typography.titleLarge)
-            Text(if (tarefas == null && lembretes == null) "Consulte as datas dos eventos publicados." else "Prazos, lembretes e eventos publicados, em um só lugar.", style = MaterialTheme.typography.bodyMedium) }
+            Text(if (tarefas == null && lembretes == null) "Consulte eventos e prazos de inscrição." else "Prazos, lembretes e eventos publicados, em um só lugar.", style = MaterialTheme.typography.bodyMedium) }
         tarefas?.let { estadoTarefas ->
             item { br.com.unisync.mobile.ui.tarefas.StatusSincronizacao(estadoTarefas) }
             estadoTarefas.erro?.let { mensagem -> item { MensagemDeErro(mensagem) } }
@@ -200,6 +248,16 @@ fun TelaCalendario(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
                     } }
                 }
                 eventos.filter { it.horario()?.toLocalDate() == data }.forEach { item -> CartaoOportunidade(item) { detalhe = item.id } }
+                inscricoes[data].orEmpty().forEach { (_, item) ->
+                    OutlinedCard(onClick = { detalhe = item.id }, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Prazo de inscrição", style = MaterialTheme.typography.labelLarge)
+                            Text(item.titulo, style = MaterialTheme.typography.titleMedium)
+                            item.prazoFormatado()?.let { Text(it) }
+                            Text(item.situacaoInscricao(), style = MaterialTheme.typography.bodySmall)
+                        }
+                    }
+                }
             }
         }
     }

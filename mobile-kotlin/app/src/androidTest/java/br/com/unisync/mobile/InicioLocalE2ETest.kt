@@ -18,6 +18,8 @@ import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDateTime
+import java.time.Instant
+import org.json.JSONObject
 import java.util.UUID
 
 /** Navegação real por perfil com contas técnicas, sem trocar a sessão salva da instalação. */
@@ -51,12 +53,21 @@ class InicioLocalE2ETest {
             }
             val aviso = avisos.last()
             val tituloOportunidade = "Oficina Painel ${id.take(8)}"
+            val link = "https://example.org/inscricao"
+            val prazo = Instant.parse("1999-12-31T23:59:00Z")
             val oportunidade = runBlocking {
                 // Data antiga garante presença no recorte ordenado por evento da API, mesmo com dados de outros testes.
-                app.oportunidades.publicar(professor.token, professor.nome, DadosOportunidade(tituloOportunidade, "Kotlin", "Conteúdo completo da oficina do painel.", "Workshop", LocalDateTime.of(2000, 1, 1, 12, 0)))
+                app.oportunidades.publicar(professor.token, professor.nome, DadosOportunidade(tituloOportunidade, "Kotlin", "Conteúdo completo da oficina do painel.", "Workshop", LocalDateTime.of(2000, 1, 1, 12, 0), link, prazo))
                 app.oportunidades.itens.first().single { it.titulo == tituloOportunidade }
             }
             oportunidadeId = oportunidade.id
+            runBlocking {
+                val api = ClienteAcademico()
+                val editada = JSONObject(api.executar("PATCH", "/oportunidades/atualizar/${oportunidade.id}", professor.token,
+                    JSONObject().put("materia", "Kotlin atualizado").toString()))
+                assertEquals(link, editada.getString("url_inscricao"))
+                assertEquals(prazo, Instant.parse(editada.getString("prazo_inscricao")))
+            }
             compose.setContent { TemaUniSync { key(sessao.token) {
                 AreaPrincipal(sessao, app, ModoTema.SISTEMA, { expirou = true }, {}, null, false)
             } } }
@@ -75,6 +86,8 @@ class InicioLocalE2ETest {
             compose.onNode(hasScrollAction()).performScrollToNode(hasText(tituloOportunidade))
             compose.onNodeWithTag("inicio-oportunidade:${oportunidade.id}").performClick()
             compose.onNodeWithText("Conteúdo completo da oficina do painel.").assertExists()
+            compose.onNode(hasText("Prazo de inscrição:", substring = true) and hasAnyAncestor(isDialog())).assertExists()
+            compose.onNodeWithText("Abrir site de inscrição").assertDoesNotExist()
             compose.onNodeWithText("Editar oportunidade").assertDoesNotExist()
             compose.onNodeWithText("Fechar").performClick(); voltar()
             compose.onNode(hasScrollAction()).performScrollToNode(hasText("Olá, Aluno Painel"))
@@ -89,6 +102,12 @@ class InicioLocalE2ETest {
             compose.onNodeWithTag("inicio-oportunidade:${oportunidade.id}").performClick()
             compose.onNodeWithText("Editar oportunidade").performScrollTo().assertIsDisplayed()
             compose.onNodeWithText("Fechar").performClick(); voltar()
+            runBlocking {
+                app.oportunidades.editar(professor.token, oportunidade.id, DadosOportunidade(tituloOportunidade,
+                    "Kotlin", "Inscrições removidas", "Workshop", LocalDateTime.of(2000, 1, 1, 12, 0)))
+                val limpa = app.oportunidades.itens.first().single { it.id == oportunidade.id }
+                assertNull(limpa.urlInscricao); assertNull(limpa.prazoInscricao)
+            }
             compose.onNode(isDialog()).assertDoesNotExist()
             assertFalse(expirou)
         } finally {

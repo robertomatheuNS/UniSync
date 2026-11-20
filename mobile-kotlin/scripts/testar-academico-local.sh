@@ -55,7 +55,7 @@ printf '%s\n' "$resultado" | tee app/build/reports/academico/instrumentacao.txt
 if [[ "$resultado" != *"OK ("* || "$resultado" == *"FAILURES!!!"* || "$resultado" == *"INSTRUMENTATION_FAILED"* ]]; then
     exit 1
 fi
-for captura in inicio-avisos-escuro.png inicio-oportunidades-escuro.png mural-anexos-escuro.png mural-anexos-aluno.png mural-comentario-escuro.png mural-conversa-aluno.png mural-formulario-escuro.png mural-publicacao-aluno.png mural-publicacao-professor.png lembrete-formulario-escuro.png turmas-claro.png aviso-formulario-escuro.png turmas-paisagem-fonte-ampliada.png academico-turma-professor.png academico-aviso-aluno.png; do
+for captura in oportunidade-inscricao.png inicio-avisos-escuro.png inicio-oportunidades-escuro.png mural-anexos-escuro.png mural-anexos-aluno.png mural-comentario-escuro.png mural-conversa-aluno.png mural-formulario-escuro.png mural-publicacao-aluno.png mural-publicacao-professor.png lembrete-formulario-escuro.png turmas-claro.png aviso-formulario-escuro.png turmas-paisagem-fonte-ampliada.png academico-turma-professor.png academico-aviso-aluno.png; do
     "$adb_local" exec-out run-as br.com.unisync.mobile cat "cache/$captura" > "app/build/reports/academico/$captura"
 done
 "$adb_local" shell am start -n br.com.unisync.mobile/.MainActivity

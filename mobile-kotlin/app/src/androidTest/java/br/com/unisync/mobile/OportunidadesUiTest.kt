@@ -1,6 +1,12 @@
 package br.com.unisync.mobile
 
 import android.graphics.Bitmap
+import android.content.ContextWrapper
+import android.content.Intent
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.IntentCompat
 import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.*
@@ -13,6 +19,8 @@ import org.junit.Rule
 import org.junit.Test
 import java.io.File
 import java.time.LocalDateTime
+import java.time.Instant
+import br.com.unisync.mobile.domain.oportunidades.DadosOportunidade
 import br.com.unisync.mobile.domain.tarefas.*
 import br.com.unisync.mobile.ui.tarefas.EstadoTarefas
 
@@ -53,5 +61,68 @@ class OportunidadesUiTest {
         arquivo.outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG,100,it) }
         compose.onNodeWithText("Semana").performScrollTo().performClick()
         compose.onNodeWithText("Conferência Android").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun detalheAbreLinkHttpsECompartilhaPeloSeletorAndroid() {
+        val link = "https://example.org/inscricao"
+        val item = evento.copy(dataEvento = Instant.now().plusSeconds(86400).toString(), urlInscricao = link,
+            prazoInscricao = Instant.now().plusSeconds(3600))
+        val acoes = mutableListOf<Intent>()
+        compose.setContent {
+            val base = LocalContext.current
+            val contexto = remember(base) { object : ContextWrapper(base) {
+                override fun startActivity(intent: Intent) { acoes.add(intent) }
+            } }
+            CompositionLocalProvider(LocalContext provides contexto) {
+                TemaUniSync(temaEscuro = true) { Surface {
+                    TelaOportunidades(EstadoOportunidades(listOf(item), lendo = false), {}, oportunidadeInicial = item.id)
+                } }
+            }
+        }
+        compose.onNodeWithText("Abrir site de inscrição").performScrollTo().assertIsDisplayed()
+        File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir, "oportunidade-inscricao.png").outputStream().use {
+            compose.onNode(isDialog()).captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
+        compose.onNodeWithText("Abrir site de inscrição").performClick()
+        compose.onNodeWithText("Compartilhar oportunidade").performScrollTo().performClick()
+        compose.runOnIdle {
+            org.junit.Assert.assertEquals(Intent.ACTION_VIEW, acoes[0].action)
+            org.junit.Assert.assertEquals(link, acoes[0].dataString)
+            org.junit.Assert.assertEquals(Intent.ACTION_CHOOSER, acoes[1].action)
+            val enviado = IntentCompat.getParcelableExtra(acoes[1], Intent.EXTRA_INTENT, Intent::class.java)!!
+            org.junit.Assert.assertEquals(Intent.ACTION_SEND, enviado.action)
+            val texto = enviado.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+            org.junit.Assert.assertTrue(texto.contains(link) && texto.contains(item.titulo) && texto.contains("Prazo de inscrição"))
+        }
+    }
+
+    @Test fun agendaAbrePrazoDeInscricaoMesmoQuandoEventoEstaForaDoMes() {
+        val item = evento.copy(dataEvento = Instant.now().plusSeconds(86400L * 45).toString(), prazoInscricao = Instant.now().plusSeconds(120))
+        compose.setContent { TemaUniSync { Surface { TelaCalendario(EstadoOportunidades(listOf(item), lendo = false), {}) } } }
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Prazo de inscrição"))
+        compose.onNodeWithText("Prazo de inscrição").performClick()
+        compose.onNodeWithText("Inscrições encerradas").assertDoesNotExist()
+        compose.onNode(hasText("Prazo de inscrição:", substring = true) and hasAnyAncestor(isDialog())).assertExists()
+    }
+
+    @Test fun professorPodeCorrigirLinkInvalidoERemoverPrazo() {
+        val item = evento.copy(urlInscricao = "https://example.org/inscricao", prazoInscricao = Instant.now().plusSeconds(1800))
+        var dados: DadosOportunidade? = null
+        compose.setContent { TemaUniSync { FormularioOportunidade(item, false, null, { dados = it }, {}) } }
+        val link = compose.onNodeWithText("Link de inscrição (opcional)")
+        link.performScrollTo().performTextReplacement("http://example.org")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.onNodeWithText("Salvar alterações").performClick()
+        link.performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Informe um endereço HTTPS sem usuário ou senha.").assertExists()
+        compose.runOnIdle { org.junit.Assert.assertNull(dados) }
+        link.performTextReplacement("https://example.org/novo")
+        androidx.test.espresso.Espresso.closeSoftKeyboard()
+        compose.onNodeWithText("Remover prazo").performScrollTo().performClick()
+        compose.onNodeWithText("Salvar alterações").performClick()
+        compose.runOnIdle {
+            org.junit.Assert.assertEquals("https://example.org/novo", dados?.urlInscricao)
+            org.junit.Assert.assertNull(dados?.prazoInscricao)
+        }
     }
 }

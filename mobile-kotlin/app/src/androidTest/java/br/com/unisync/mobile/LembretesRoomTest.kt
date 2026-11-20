@@ -18,12 +18,20 @@ class LembretesRoomTest {
             antigo.execSQL("CREATE TABLE oportunidades (id TEXT NOT NULL PRIMARY KEY, titulo TEXT NOT NULL, professor TEXT NOT NULL, materia TEXT NOT NULL, descricao TEXT, tipo TEXT NOT NULL, dataEvento TEXT NOT NULL, professorId TEXT)")
             antigo.execSQL("INSERT INTO tarefas VALUES ('id', 'eu', 'Preservada', 'A_FAZER', 'ALTA', '2028-02-29', 'turma', 'Kotlin')")
             antigo.execSQL("INSERT INTO sincronizacoes VALUES ('eu', 123)")
+            antigo.execSQL("INSERT INTO oportunidades VALUES ('op', 'Oficina Kotlin', 'Ana', 'Kotlin', NULL, 'Oficina', '2028-03-01T12:00:00Z', 'prof')")
             antigo.version = 4
         }
-        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_4_5).build()
+        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_4_5, BancoUniSync.MIGRACAO_5_6).build()
         try {
             assertEquals("2028-02-29", banco.tarefas().listar("eu").single().prazo)
             assertEquals(123L, banco.tarefas().atualizadoEm("eu"))
+            val anterior = banco.oportunidades().observar().first().single()
+            assertEquals("Oficina Kotlin", anterior.titulo)
+            assertNull(anterior.urlInscricao)
+            assertNull(anterior.prazoInscricao)
+            val inscricao = anterior.copy(urlInscricao = "https://example.org/inscricao", prazoInscricao = "2028-02-29T12:30:00Z")
+            banco.oportunidades().salvar(listOf(inscricao))
+            assertEquals(inscricao, banco.oportunidades().observar().first().single())
             val item = LembreteLocal("a", "eu", "Entrega", false, "2028-02-29T12:30:00Z")
             banco.lembretes().substituir("eu", listOf(item), 456)
             banco.lembretes().substituir("outra", listOf(item.copy(usuarioId = "outra")), 789)
