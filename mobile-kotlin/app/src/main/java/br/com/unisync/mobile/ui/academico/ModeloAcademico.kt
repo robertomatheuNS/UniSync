@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 data class EstadoAcademico(val turmas: List<Turma> = emptyList(), val avisos: List<Aviso> = emptyList(),
     val lendo: Boolean = true, val atualizando: Boolean = false, val salvando: Boolean = false,
     val erro: String? = null, val mensagem: String? = null, val confirmacao: Int = 0,
-    val atualizadoEm: Long? = null)
+    val atualizadoEm: Long? = null, val offline: Boolean = false)
 
 /** Conteúdo privado mantido apenas durante esta sessão; não é compartilhado entre contas. */
 class ModeloAcademico(private val repo: Academico, private val token: String, private val usuarioId: String,
@@ -30,7 +30,7 @@ class ModeloAcademico(private val repo: Academico, private val token: String, pr
             try {
                 val conteudo = repo.carregar(token)
                 _estado.update { it.copy(turmas = conteudo.turmas, avisos = conteudo.avisos,
-                    atualizadoEm = System.currentTimeMillis()) }
+                    atualizadoEm = conteudo.atualizadoEm ?: System.currentTimeMillis(), offline = conteudo.origemCache) }
             } catch (erro: CancellationException) { throw erro }
             catch (erro: FalhaApi) { falha(erro) }
             catch (_: Exception) { _estado.update { it.copy(erro = "Não foi possível atualizar turmas e avisos. Confira a conexão e tente novamente.") } }

@@ -2,17 +2,39 @@ package br.com.unisync.mobile.data
 
 import br.com.unisync.mobile.data.remote.ClienteAcademico
 import br.com.unisync.mobile.data.remote.FalhaApi
+import br.com.unisync.mobile.data.local.AcademicoDao
+import br.com.unisync.mobile.data.local.TurmaCache
+import br.com.unisync.mobile.data.local.AvisoCache
 import br.com.unisync.mobile.domain.academico.*
 import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.supervisorScope
+import java.io.IOException
+import kotlinx.coroutines.CancellationException
 import org.json.JSONArray
 import org.json.JSONObject
 
-class RepositorioAcademico(private val api: ClienteAcademico = ClienteAcademico()) : Academico {
-    override suspend fun carregar(token: String): ConteudoAcademico = coroutineScope {
-        val turmas = async { lista(api.executar("GET", "/turmas/listar", token), ::turma) }
-        val avisos = async { lista(api.executar("GET", "/avisos/listar", token), ::aviso) }
-        ConteudoAcademico(turmas.await(), avisos.await())
+class RepositorioAcademico(private val api: ClienteAcademico = ClienteAcademico(), private val cache: AcademicoDao? = null) : Academico {
+    override suspend fun carregar(token: String): ConteudoAcademico = supervisorScope {
+        val usuarioId = SessaoAutenticada.doToken(token).usuarioId
+        try {
+            val turmas = async { api.executar("GET", "/turmas/listar", token) }
+            val avisos = async { api.executar("GET", "/avisos/listar", token) }
+            val respostaTurmas = turmas.await()
+            val respostaAvisos = avisos.await()
+            val conteudo = ConteudoAcademico(lista(respostaTurmas, ::turma), lista(respostaAvisos, ::aviso),
+                atualizadoEm = System.currentTimeMillis())
+            cache?.substituir(usuarioId,
+                JSONArray(respostaTurmas).let { json -> (0 until json.length()).map { TurmaCache(usuarioId, json.getJSONObject(it).getString("id"), json.getJSONObject(it).toString()) } },
+                JSONArray(respostaAvisos).let { json -> (0 until json.length()).map { AvisoCache(usuarioId, json.getJSONObject(it).getString("id"), json.getJSONObject(it).toString()) } })
+            conteudo
+        } catch (erro: CancellationException) { throw erro }
+        catch (erro: IOException) {
+            if (erro is FalhaApi && erro.status in setOf(401, 403)) throw erro
+            val atualizadoEm = cache?.atualizadoEm(usuarioId) ?: throw erro
+            ConteudoAcademico(cache.listarTurmas(usuarioId).map { turma(JSONObject(it.json)) },
+                cache.listarAvisos(usuarioId).map { aviso(JSONObject(it.json)) }, origemCache = true,
+                atualizadoEm = atualizadoEm)
+        }
     }
 
     override suspend fun criarTurma(token: String, dados: DadosTurma): Turma =

@@ -18,11 +18,12 @@ import br.com.unisync.mobile.data.local.PreferenciasUniSync
 import br.com.unisync.mobile.data.RepositorioTarefas
 import br.com.unisync.mobile.data.RepositorioOportunidades
 import br.com.unisync.mobile.data.RepositorioAcademico
+import br.com.unisync.mobile.data.SincronizacaoPeriodica
 import br.com.unisync.mobile.data.remote.ClienteAcademico
 
 class UniSyncApplication : Application() {
     val banco by lazy { Room.databaseBuilder(this, BancoUniSync::class.java, "unisync.db")
-        .addMigrations(BancoUniSync.MIGRACAO_1_2, BancoUniSync.MIGRACAO_2_3, BancoUniSync.MIGRACAO_3_4, BancoUniSync.MIGRACAO_4_5, BancoUniSync.MIGRACAO_5_6).build() }
+        .addMigrations(BancoUniSync.MIGRACAO_1_2, BancoUniSync.MIGRACAO_2_3, BancoUniSync.MIGRACAO_3_4, BancoUniSync.MIGRACAO_4_5, BancoUniSync.MIGRACAO_5_6, BancoUniSync.MIGRACAO_6_7).build() }
     val lembretes by lazy { RepositorioLembretes(banco.lembretes(), ClienteAcademico()) }
     val tarefas by lazy { RepositorioTarefas(banco.tarefas(), ClienteAcademico()) }
     val oportunidades by lazy { RepositorioOportunidades(banco.oportunidades(), ClienteAcademico()) }
@@ -30,7 +31,7 @@ class UniSyncApplication : Application() {
     val anexosMural by lazy { RepositorioAnexosMural() }
     val arquivosAnexos by lazy { ArquivosAnexos(this) }
     val mural by lazy { RepositorioMural() }
-    val academico by lazy { RepositorioAcademico() }
+    val academico by lazy { RepositorioAcademico(ClienteAcademico(), banco.academico()) }
     val preferencias by lazy { PreferenciasUniSync(this) }
     val escopoAplicacao = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     val alertas by lazy { GerenciadorAlertas(banco,
@@ -52,8 +53,10 @@ class UniSyncApplication : Application() {
         catch (_: Exception) { Log.w("UniSync", "Não foi possível atualizar os alertas locais.") }
     }
     suspend fun limparDadosPrivados() {
+        SincronizacaoPeriodica.cancelar(this)
         arquivosAnexos.limpar()
         alertas.desativar()
         tarefas.limparCache(); lembretes.limparCache()
+        banco.academico().limparTudo()
     }
 }

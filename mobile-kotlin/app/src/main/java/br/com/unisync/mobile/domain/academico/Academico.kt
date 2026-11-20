@@ -29,7 +29,8 @@ fun validarCodigoTurma(codigo: String): String = codigo.trim().uppercase().also 
     require(it.matches(Regex("[A-F0-9]{12}"))) { "Informe o código de 12 caracteres fornecido pelo professor." }
 }
 
-data class ConteudoAcademico(val turmas: List<Turma> = emptyList(), val avisos: List<Aviso> = emptyList())
+data class ConteudoAcademico(val turmas: List<Turma> = emptyList(), val avisos: List<Aviso> = emptyList(),
+    val origemCache: Boolean = false, val atualizadoEm: Long? = null)
 
 interface Academico {
     suspend fun carregar(token: String): ConteudoAcademico

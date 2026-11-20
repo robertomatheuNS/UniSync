@@ -82,10 +82,12 @@ class ModeloSessaoTest {
 
     @Test fun tokenCorrompidoEhRemovido() = runTest(dispatcher) {
         val cofre = Cofre("invalido")
-        val modelo = ModeloSessao(api, cofre) { 1000 }
+        var cacheLimpo = false
+        val modelo = ModeloSessao(api, cofre, limparCache = { cacheLimpo = true }, agora = { 1000 })
         runCurrent()
         assertNull(modelo.sessao)
         assertNull(cofre.token)
+        assertTrue(cacheLimpo)
         assertTrue(modelo.estado.solicitarLogin)
     }
 

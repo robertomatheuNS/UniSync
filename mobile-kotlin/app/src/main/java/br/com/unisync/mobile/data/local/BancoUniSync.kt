@@ -62,13 +62,21 @@ interface TarefaDao {
     }
 }
 
-@Database(entities = [TarefaLocal::class, SincronizacaoLocal::class, OportunidadeLocal::class, LembreteLocal::class, SincronizacaoLembretes::class, AlertaLocal::class], version = 6, exportSchema = true)
+@Database(entities = [TarefaLocal::class, SincronizacaoLocal::class, OportunidadeLocal::class, LembreteLocal::class, SincronizacaoLembretes::class, AlertaLocal::class, TurmaCache::class, AvisoCache::class, SincronizacaoAcademico::class], version = 7, exportSchema = true)
 abstract class BancoUniSync : RoomDatabase() {
     abstract fun tarefas(): TarefaDao
     abstract fun oportunidades(): OportunidadeDao
     abstract fun lembretes(): LembreteDao
     abstract fun alertas(): AlertaDao
+    abstract fun academico(): AcademicoDao
     companion object {
+        val MIGRACAO_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS turmas_cache (usuarioId TEXT NOT NULL, id TEXT NOT NULL, json TEXT NOT NULL, PRIMARY KEY(usuarioId, id))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS avisos_cache (usuarioId TEXT NOT NULL, id TEXT NOT NULL, json TEXT NOT NULL, PRIMARY KEY(usuarioId, id))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS sincronizacoes_academico (usuarioId TEXT NOT NULL PRIMARY KEY, atualizadoEm INTEGER NOT NULL)")
+            }
+        }
         val MIGRACAO_5_6 = object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE oportunidades ADD COLUMN urlInscricao TEXT")

@@ -32,7 +32,9 @@ private fun CabecalhoAcademico(estado: EstadoAcademico, aoAtualizar: () -> Unit)
         TextButton(enabled = !estado.atualizando && !estado.salvando, onClick = aoAtualizar) { Text("Atualizar turmas e avisos") }
         if (estado.lendo || estado.atualizando || estado.salvando) LinearProgressIndicator(Modifier.fillMaxWidth())
         if (estado.atualizadoEm == null) Text("Atualize para consultar suas turmas e avisos.", style = MaterialTheme.typography.bodySmall)
-        else Text("Última consulta: ${formatarData(Instant.ofEpochMilli(estado.atualizadoEm).toString())}", style = MaterialTheme.typography.bodySmall)
+        else Text("${if (estado.offline) "Dados salvos no aparelho" else "Última consulta"}: ${formatarData(Instant.ofEpochMilli(estado.atualizadoEm).toString())}", style = MaterialTheme.typography.bodySmall)
+        if (estado.offline) Text("Sem conexão com o serviço. Turmas e avisos podem estar desatualizados; operações exigem internet.",
+            color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
         estado.erro?.let { MensagemDeErro(it) }
         estado.mensagem?.let { Text(it, modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite }) }
     }
