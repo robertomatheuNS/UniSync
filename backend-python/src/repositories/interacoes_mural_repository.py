@@ -8,7 +8,7 @@ async def curtir(publicacao_id, usuario_id, curtiu):
     operador = "$addToSet" if curtiu else "$pull"
     item = await Publicacao.get_pymongo_collection().find_one_and_update(
         {"_id": publicacao_id, "excluida": False}, {operador: {"curtidas": usuario_id}},
-        return_document=ReturnDocument.AFTER,
+        return_document=ReturnDocument.AFTER, projection={"anexos.dados": 0},
     )
     return Publicacao.model_validate(item) if item else None
 

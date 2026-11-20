@@ -24,7 +24,9 @@ fun TelaMural(estado: EstadoMural, turmas: List<Turma>, aoAtualizar: () -> Unit,
     aoCarregarMais: () -> Unit, aoAbrir: (String) -> Unit, aoFecharDetalhe: () -> Unit,
     aoSalvar: (String?, Int?, DadosPublicacao) -> Unit, aoExcluir: (Publicacao) -> Unit, aoVerTurmas: () -> Unit,
     conversa: EstadoConversa? = null, aoAtualizarComentarios: () -> Unit = {}, aoCarregarMaisComentarios: () -> Unit = {},
-    aoSalvarComentario: (String?, Int?, String) -> Unit = { _, _, _ -> }, aoExcluirComentario: (Comentario) -> Unit = {}, aoCurtir: (Boolean) -> Unit = {}) {
+    aoSalvarComentario: (String?, Int?, String) -> Unit = { _, _, _ -> }, aoExcluirComentario: (Comentario) -> Unit = {}, aoCurtir: (Boolean) -> Unit = {},
+    anexos: EstadoAnexos? = null, aoAtualizarAnexos: () -> Unit = {}, aoEnviarAnexo: (String, String) -> Unit = { _, _ -> },
+    aoAbrirAnexo: (Anexo) -> Unit = {}, aoExcluirAnexo: (Anexo) -> Unit = {}) {
     var alvoDetalhe by rememberSaveable { mutableStateOf<String?>(null) }
     var formulario by rememberSaveable { mutableStateOf(false) }
     var editando by rememberSaveable { mutableStateOf(false) }
@@ -42,7 +44,7 @@ fun TelaMural(estado: EstadoMural, turmas: List<Turma>, aoAtualizar: () -> Unit,
     val abrir = { id: String -> alvoDetalhe = id; aoAbrir(id) }
     val fecharDetalhe = { alvoDetalhe = null; aoFecharDetalhe() }
     val filtrar = { turmaId: String? -> alvoDetalhe = null; aoFiltrar(turmaId) }
-    val ocupado = estado.salvando || estado.atualizando || estado.carregandoMais || conversa?.salvando == true || conversa?.curtindo == true
+    val ocupado = estado.salvando || estado.atualizando || estado.carregandoMais || conversa?.salvando == true || conversa?.curtindo == true || anexos?.operando == true
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Mural da comunidade", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             Text("Compartilhe ideias, dúvidas e novidades com suas turmas.")
@@ -89,7 +91,8 @@ fun TelaMural(estado: EstadoMural, turmas: List<Turma>, aoAtualizar: () -> Unit,
     if (estado.abrindoId != null && !formulario && excluir == null) key(estado.abrindoId) {
         DetalhePublicacao(estado, conversa, fecharDetalhe, { estado.abrindoId?.let(abrir) },
             { editando = true; formulario = true }, { excluir = estado.detalhe },
-            aoAtualizarComentarios, aoCarregarMaisComentarios, aoSalvarComentario, aoExcluirComentario, aoCurtir)
+            aoAtualizarComentarios, aoCarregarMaisComentarios, aoSalvarComentario, aoExcluirComentario, aoCurtir,
+            anexos, aoAtualizarAnexos, aoEnviarAnexo, aoAbrirAnexo, aoExcluirAnexo)
     }
     excluir?.let { item -> AlertDialog(onDismissRequest = { if (!estado.salvando) excluir = null }, title = { Text("Excluir publicação?") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
