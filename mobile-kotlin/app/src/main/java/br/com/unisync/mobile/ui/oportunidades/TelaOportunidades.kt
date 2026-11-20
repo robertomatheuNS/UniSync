@@ -13,6 +13,9 @@ import androidx.compose.ui.unit.dp
 import br.com.unisync.mobile.domain.oportunidades.Oportunidade
 import br.com.unisync.mobile.domain.oportunidades.DadosOportunidade
 import br.com.unisync.mobile.ui.componentes.*
+import br.com.unisync.mobile.domain.lembretes.Lembrete
+import br.com.unisync.mobile.ui.lembretes.*
+import java.time.ZoneId
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -118,7 +121,8 @@ private fun DetalheOportunidade(item: Oportunidade, podeEditar: Boolean = false,
 @Composable
 fun TelaCalendario(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
     tarefas: br.com.unisync.mobile.ui.tarefas.EstadoTarefas? = null,
-    aoAbrirTarefa: (br.com.unisync.mobile.domain.tarefas.Tarefa) -> Unit = {}) {
+    aoAbrirTarefa: (br.com.unisync.mobile.domain.tarefas.Tarefa) -> Unit = {},
+    lembretes: EstadoLembretes? = null, aoAbrirLembrete: (Lembrete) -> Unit = {}) {
     var mes by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
     var modo by rememberSaveable { mutableStateOf("Mês") }
     var dia by rememberSaveable { mutableStateOf(LocalDate.now().toString()) }
@@ -133,14 +137,20 @@ fun TelaCalendario(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
     }
     val eventos = estado.itens.filter { it.horario()?.toLocalDate()?.let(::noPeriodo) == true }.sortedBy { it.horario() }
     val prazos = tarefas?.itens.orEmpty().filter { it.prazo?.let(::noPeriodo) == true }
-    val datas = (eventos.mapNotNull { it.horario()?.toLocalDate() } + prazos.mapNotNull { it.prazo }).distinct().sorted()
+    fun diaLembrete(item: Lembrete) = item.agendadoEm?.atZone(ZoneId.systemDefault())?.toLocalDate()
+    val agendados = lembretes?.itens.orEmpty().filter { diaLembrete(it)?.let(::noPeriodo) == true }.sortedBy { it.agendadoEm }
+    val datas = (eventos.mapNotNull { it.horario()?.toLocalDate() } + prazos.mapNotNull { it.prazo } + agendados.mapNotNull(::diaLembrete)).distinct().sorted()
     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { CabecalhoOportunidades(estado, aoAtualizar) }
-        item { Text(if (tarefas == null) "Agenda dos eventos publicados" else "Sua agenda acadêmica", style = MaterialTheme.typography.titleLarge)
-            Text(if (tarefas == null) "Consulte as datas dos eventos publicados." else "Prazos das tarefas e eventos publicados, em um só lugar.", style = MaterialTheme.typography.bodyMedium) }
+        item { Text(if (tarefas == null && lembretes == null) "Agenda dos eventos publicados" else "Sua agenda acadêmica", style = MaterialTheme.typography.titleLarge)
+            Text(if (tarefas == null && lembretes == null) "Consulte as datas dos eventos publicados." else "Prazos, lembretes e eventos publicados, em um só lugar.", style = MaterialTheme.typography.bodyMedium) }
         tarefas?.let { estadoTarefas ->
             item { br.com.unisync.mobile.ui.tarefas.StatusSincronizacao(estadoTarefas) }
             estadoTarefas.erro?.let { mensagem -> item { MensagemDeErro(mensagem) } }
+        }
+        lembretes?.let { estadoLembretes ->
+            item { StatusLembretes(estadoLembretes) }
+            estadoLembretes.erro?.let { mensagem -> item { MensagemDeErro(mensagem) } }
         }
         item { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("Mês", "Semana", "Dia").forEach { opcao -> FilterChip(selected = modo == opcao,
@@ -161,8 +171,8 @@ fun TelaCalendario(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
                 }
             }
         }
-        if (datas.isEmpty() && !estado.lendo && tarefas?.lendo != true) item {
-            ConteudoVazio("Nenhum compromisso neste período", "Tarefas com prazo e eventos aparecem aqui. Selecione outro período ou atualize.")
+        if (datas.isEmpty() && !estado.lendo && tarefas?.lendo != true && lembretes?.lendo != true) item {
+            ConteudoVazio("Nenhum compromisso neste período", "Tarefas com prazo, lembretes agendados e eventos aparecem aqui. Selecione outro período ou atualize.")
         }
         items(datas, key = { it.toString() }) { data ->
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -172,6 +182,14 @@ fun TelaCalendario(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
                         Text(tarefa.titulo, style = MaterialTheme.typography.titleMedium)
                         br.com.unisync.mobile.ui.tarefas.ResumoTarefa(tarefa)
                         TextButton(onClick = { aoAbrirTarefa(tarefa) }) { Text("Abrir tarefa") }
+                    } }
+                }
+                agendados.filter { diaLembrete(it) == data }.forEach { lembrete ->
+                    Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(lembrete.titulo, style = MaterialTheme.typography.titleMedium)
+                        Text("Lembrete • ${if (lembrete.concluido) "Concluído" else "Pendente"}")
+                        Text(lembrete.horarioLocal())
+                        TextButton(onClick = { aoAbrirLembrete(lembrete) }) { Text("Abrir lembrete") }
                     } }
                 }
                 eventos.filter { it.horario()?.toLocalDate() == data }.forEach { item -> CartaoOportunidade(item) { detalhe = item.id } }

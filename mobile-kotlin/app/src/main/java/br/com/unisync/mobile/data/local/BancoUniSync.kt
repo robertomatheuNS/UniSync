@@ -36,6 +36,8 @@ interface OportunidadeDao {
 interface TarefaDao {
     @Query("SELECT * FROM tarefas WHERE alunoId = :alunoId ORDER BY titulo COLLATE NOCASE")
     fun observar(alunoId: String): Flow<List<TarefaLocal>>
+    @Query("SELECT * FROM tarefas") fun observarTodas(): Flow<List<TarefaLocal>>
+    @Query("SELECT * FROM tarefas WHERE alunoId = :alunoId") suspend fun listar(alunoId: String): List<TarefaLocal>
     @Query("SELECT atualizadoEm FROM sincronizacoes WHERE alunoId = :alunoId")
     suspend fun atualizadoEm(alunoId: String): Long?
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -60,11 +62,20 @@ interface TarefaDao {
     }
 }
 
-@Database(entities = [TarefaLocal::class, SincronizacaoLocal::class, OportunidadeLocal::class], version = 4, exportSchema = true)
+@Database(entities = [TarefaLocal::class, SincronizacaoLocal::class, OportunidadeLocal::class, LembreteLocal::class, SincronizacaoLembretes::class, AlertaLocal::class], version = 5, exportSchema = true)
 abstract class BancoUniSync : RoomDatabase() {
     abstract fun tarefas(): TarefaDao
     abstract fun oportunidades(): OportunidadeDao
+    abstract fun lembretes(): LembreteDao
+    abstract fun alertas(): AlertaDao
     companion object {
+        val MIGRACAO_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS lembretes (id TEXT NOT NULL, usuarioId TEXT NOT NULL, titulo TEXT NOT NULL, concluido INTEGER NOT NULL, agendadoEm TEXT, PRIMARY KEY(usuarioId, id))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS sincronizacoes_lembretes (usuarioId TEXT NOT NULL PRIMARY KEY, atualizadoEm INTEGER NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS alertas (usuarioId TEXT NOT NULL, chave TEXT NOT NULL, horario INTEGER NOT NULL, entregue INTEGER NOT NULL, PRIMARY KEY(usuarioId, chave))")
+            }
+        }
         val MIGRACAO_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE tarefas ADD COLUMN prioridade TEXT NOT NULL DEFAULT 'MEDIA'")

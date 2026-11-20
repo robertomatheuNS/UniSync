@@ -1,6 +1,8 @@
 package br.com.unisync.mobile
 
 import android.os.Bundle
+import android.content.Intent
+import br.com.unisync.mobile.notificacoes.AberturaAlerta
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -20,13 +22,24 @@ import br.com.unisync.mobile.data.local.ModoTema
 import androidx.compose.foundation.isSystemInDarkTheme
 
 class MainActivity : ComponentActivity() {
+    private var aberturaAlerta by mutableStateOf<AberturaAlerta?>(null)
+    private fun lerAlerta(intent: Intent): AberturaAlerta? {
+        val usuario = intent.getStringExtra("usuario_alerta") ?: return null
+        val destino = intent.getStringExtra("destino_alerta") ?: return null
+        val item = intent.getStringExtra("item_alerta") ?: return null
+        return AberturaAlerta(usuario, destino, item)
+    }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        aberturaAlerta = lerAlerta(intent)
+    }
     private val modeloSessao by lazy {
         ViewModelProvider(this, object : ViewModelProvider.Factory {
             override fun <T : ViewModel> create(modelClass: Class<T>): T {
                 require(modelClass.isAssignableFrom(ModeloSessao::class.java))
                 @Suppress("UNCHECKED_CAST")
                 return ModeloSessao(RepositorioAutenticacao(), SessaoSegura(applicationContext),
-                    limparCache = { (application as UniSyncApplication).tarefas.limparCache() }) as T
+                    limparCache = { (application as UniSyncApplication).limparDadosPrivados() }) as T
             }
         })[ModeloSessao::class.java]
     }
@@ -38,6 +51,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(estadoSalvo: Bundle?) {
         super.onCreate(estadoSalvo)
+        aberturaAlerta = if (estadoSalvo == null) lerAlerta(intent) else null
         enableEdgeToEdge()
         setContent {
             val aplicacao = application as UniSyncApplication
@@ -63,6 +77,7 @@ class MainActivity : ComponentActivity() {
                         aoExpirar = modeloSessao::sessaoRecusada,
                         mensagem = estado.mensagem,
                         carregando = estado.carregando,
+                        aberturaAlerta = aberturaAlerta, aoConsumirAlerta = { aberturaAlerta = null; intent.removeExtra("usuario_alerta"); intent.removeExtra("destino_alerta"); intent.removeExtra("item_alerta") },
                         aoSair = {
                             modeloSessao.encerrar()
                             tela = "inicio"
