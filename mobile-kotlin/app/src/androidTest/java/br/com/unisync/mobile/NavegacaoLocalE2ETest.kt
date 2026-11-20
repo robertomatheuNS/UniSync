@@ -32,6 +32,10 @@ class NavegacaoLocalE2ETest {
         compose.onNodeWithText("Senha").performTextInput(senha)
         compose.onNode(hasText("Entrar") and hasClickAction()).performScrollTo().performClick()
         compose.waitUntil(20000) { compose.onAllNodesWithText("Olá, Teste Interface").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Abrir mural").performScrollTo().performClick()
+        compose.onNodeWithText("Mural da comunidade").assertExists()
+        compose.onNode(hasText("Nova publicação") and hasClickAction()).assertIsNotEnabled()
+        compose.onNode(hasText("Voltar") and hasClickAction()).performClick()
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Meus lembretes"))
         compose.onNodeWithText("Meus lembretes").performClick()
         compose.waitUntil(15000) { compose.onAllNodesWithText("Atualizando lembretes…").fetchSemanticsNodes().isEmpty() }

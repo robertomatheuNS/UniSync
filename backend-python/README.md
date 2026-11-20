@@ -158,7 +158,7 @@ Para executar os testes sem E2E usando Docker:
 docker compose run --rm --build --no-deps api python -m pytest -m "not e2e" -v
 ```
 
-**Última execução informada:** 59 testes passaram, excluindo E2E.
+**Validação do mural:** 137 testes unitários e HTTP aprovados, excluindo o teste Pytest marcado como E2E.
 
 ### Teste de integração E2E
 
@@ -181,15 +181,30 @@ O E2E com login real do .NET ainda está pendente de confirmação na revisão f
 
 ## 9. Estado atual do projeto
 
-O backend Python possui as funcionalidades principais do MVP implementadas.
+Estão implementados CRUD de oportunidades, tarefas e lembretes, turmas com matrícula por código, avisos com confirmação de leitura e publicações do mural. As rotas privadas validam identidade e permissões a partir do JWT emitido pelo .NET. A persistência utiliza MongoDB e Beanie.
 
-**Concluído:**
-- CRUD de oportunidades e tarefas.
-- Persistência com MongoDB e Beanie.
-- Validação de JWT emitido pelo .NET.
-- Permissões baseadas em papéis e propriedade dos registros.
-- Testes unitários e HTTP, com 59 testes passando na última execução informada.
-- Execução em containers Docker.
+Os fluxos Android usam as APIs locais diretamente. O script `../mobile-kotlin/scripts/testar-academico-local.sh` valida os ciclos reais de turmas, avisos, tarefas, lembretes e mural com contas técnicas. O teste Pytest E2E de oportunidades descrito acima é um roteiro separado e exige suas próprias variáveis de ambiente.
 
-**Pendente de validação ou alinhamento:**
-- Confirm
+Continuam previstas a evolução do mural com comentários/interações e a definição de eventos remotos e notificações push. A existência desses itens no plano não significa que já façam parte dos contratos publicados.
+
+## Mural colaborativo por turma
+
+As rotas exigem o JWT da API .NET. Alunos matriculados e o professor responsável podem publicar e ler conteúdo nas turmas ativas às quais têm acesso. O autor edita o próprio texto; a exclusão é permitida ao autor ou ao professor responsável pela turma. Publicações de turmas arquivadas ficam indisponíveis.
+
+| Método | Rota | Uso |
+|---|---|---|
+| GET | `/mural/listar` | Página de resumos das turmas autorizadas |
+| POST | `/mural/criar` | Criar publicação em turma autorizada |
+| GET | `/mural/buscar/{id}` | Detalhe com conteúdo completo |
+| PATCH | `/mural/atualizar/{id}` | Editar publicação própria com controle de versão |
+| DELETE | `/mural/excluir/{id}?versao=1` | Remover publicação da versão confirmada |
+
+Criação recebe `turma_id`, `titulo` (3–100 caracteres) e `conteudo` (1–5000). A edição recebe `titulo`, `conteudo` e `versao` (inteiro positivo); turma, autor e perfil não podem ser alterados. Espaços nas extremidades são removidos e campos extras são recusados. Autor e perfil são obtidos do token no servidor.
+
+A listagem aceita `turma_id` opcional, `limite` entre 1 e 50 (padrão 20) e `antes` como cursor da página anterior. Retorna `{ "itens": [...], "proxima_pagina": "id" }`; cursor nulo indica a última página. O filtro de autorização é aplicado em cada consulta. A ordem é decrescente por identificador; atualizar a primeira página incorpora novas publicações.
+
+Cada resumo contém `id`, `turma_id`, `turma_nome`, `disciplina`, `autor_id`, `autor`, `papel_autor`, `titulo`, `resumo`, `criado_em`, `atualizado_em`, `versao`, `pode_editar` e `pode_excluir`. O detalhe acrescenta `conteudo`. Datas são expostas em UTC com fuso explícito. As permissões da resposta orientam a interface e continuam sendo verificadas no servidor.
+
+Edição e exclusão conferem a versão atomicamente. Uma revisão desatualizada recebe **409**, sem sobrescrever ou remover a versão nova. A exclusão retira o item das consultas e registra internamente quem o removeu. Falta de acesso retorna **403**; publicação removida ou turma arquivada retorna **404**.
+
+Esta entrega inclui publicações de texto, filtro e paginação. Comentários, reações, anexos e push não fazem parte deste contrato.
