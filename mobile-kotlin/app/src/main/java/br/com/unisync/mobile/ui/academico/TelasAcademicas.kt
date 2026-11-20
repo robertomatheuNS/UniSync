@@ -109,7 +109,8 @@ fun TelaTurmas(estado: EstadoAcademico, professorId: String?, aoAtualizar: () ->
 @Composable
 fun TelaAvisos(estado: EstadoAcademico, professorId: String?, turmaInicial: String?, aoAtualizar: () -> Unit,
     aoSalvar: (String?, DadosAviso) -> Unit, aoExcluir: (String) -> Unit, aoLer: (String) -> Unit,
-    aoAbrirTurmas: () -> Unit, aoLimparMensagem: () -> Unit) {
+    aoAbrirTurmas: () -> Unit, aoLimparMensagem: () -> Unit,
+    avisoInicial: String? = null, aoConsumirAviso: () -> Unit = {}) {
     var turmaId by rememberSaveable(turmaInicial) { mutableStateOf(turmaInicial.orEmpty()) }
     var apenasNaoLidos by rememberSaveable { mutableStateOf(false) }
     var detalheId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -117,6 +118,10 @@ fun TelaAvisos(estado: EstadoAcademico, professorId: String?, turmaInicial: Stri
     var edicaoId by rememberSaveable { mutableStateOf<String?>(null) }
     var excluirId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmacaoInicial by remember { mutableIntStateOf(estado.confirmacao) }
+    LaunchedEffect(avisoInicial) { avisoInicial?.let { id ->
+        detalheId = id; turmaId = ""; apenasNaoLidos = false; formulario = false; edicaoId = null; excluirId = null
+        aoConsumirAviso()
+    } }
     LaunchedEffect(estado.confirmacao) { if (estado.confirmacao > confirmacaoInicial) {
         formulario = false; excluirId = null; detalheId = null; confirmacaoInicial = estado.confirmacao
     } }
@@ -169,6 +174,9 @@ fun TelaAvisos(estado: EstadoAcademico, professorId: String?, turmaInicial: Stri
                 estado.erro?.let { MensagemDeErro(it) }
                 if (estado.salvando) LinearProgressIndicator(Modifier.fillMaxWidth())
             } }, confirmButton = { TextButton(enabled = !estado.salvando, onClick = { detalheId = null }) { Text("Fechar") } })
+    }
+    if (detalheId != null && estado.avisos.none { it.id == detalheId }) {
+        DetalheIndisponivel("Aviso", estado.lendo || estado.atualizando, estado.erro, aoAtualizar) { detalheId = null }
     }
     val avisoEditado = estado.avisos.find { it.id == edicaoId }
     if (formulario && (edicaoId == null || avisoEditado != null)) FormularioAviso(avisoEditado, turmasProprias,

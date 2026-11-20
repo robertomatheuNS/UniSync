@@ -25,7 +25,7 @@ import java.util.Locale
 @Composable
 fun TelaOportunidades(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
     professorId: String? = null, aoSalvar: (String?, DadosOportunidade) -> Unit = { _, _ -> },
-    aoExcluir: (String) -> Unit = {}) {
+    aoExcluir: (String) -> Unit = {}, oportunidadeInicial: String? = null, aoConsumirOportunidade: () -> Unit = {}) {
     var busca by rememberSaveable { mutableStateOf("") }
     var tipo by rememberSaveable { mutableStateOf("") }
     var apenasFuturas by rememberSaveable { mutableStateOf(false) }
@@ -34,6 +34,10 @@ fun TelaOportunidades(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
     var edicaoId by rememberSaveable { mutableStateOf<String?>(null) }
     var excluirId by rememberSaveable { mutableStateOf<String?>(null) }
     var confirmacaoInicial by remember { mutableIntStateOf(estado.confirmacao) }
+    LaunchedEffect(oportunidadeInicial) { oportunidadeInicial?.let { id ->
+        detalhe = id; busca = ""; tipo = ""; apenasFuturas = false; formulario = false; edicaoId = null; excluirId = null
+        aoConsumirOportunidade()
+    } }
     LaunchedEffect(estado.confirmacao) {
         if (estado.confirmacao > confirmacaoInicial) {
             formulario = false; excluirId = null; detalhe = null; confirmacaoInicial = estado.confirmacao
@@ -67,6 +71,9 @@ fun TelaOportunidades(estado: EstadoOportunidades, aoAtualizar: () -> Unit,
             ocupado = ocupado,
             aoEditar = { edicaoId = oportunidade.id; detalhe = null; formulario = true },
             aoExcluir = { excluirId = oportunidade.id; detalhe = null }, aoFechar = { detalhe = null })
+    }
+    if (detalhe != null && estado.itens.none { it.id == detalhe }) {
+        DetalheIndisponivel("Oportunidade", estado.lendo || estado.atualizando, estado.erro, aoAtualizar) { detalhe = null }
     }
     if (formulario) FormularioOportunidade(estado.itens.find { it.id == edicaoId }, estado.salvando, estado.erro,
         aoSalvar = { aoSalvar(edicaoId, it) }, aoFechar = { formulario = false })
