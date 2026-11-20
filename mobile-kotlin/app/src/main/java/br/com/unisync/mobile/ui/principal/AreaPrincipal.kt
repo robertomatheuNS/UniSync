@@ -59,7 +59,10 @@ fun AreaPrincipal(sessao: SessaoAutenticada, aplicacao: UniSyncApplication, modo
     val lembretes by modeloLembretes.estado.collectAsStateWithLifecycle()
     val opcoesAlertas by aplicacao.preferencias.alertas(sessao.usuarioId).collectAsStateWithLifecycle(initialValue = OpcoesAlertas())
     DisposableEffect(modeloLembretes) { onDispose { modeloLembretes.fechar() } }
-    LaunchedEffect(sessao.token) { aplicacao.atualizarAlertas(ativar = true) }
+    LaunchedEffect(sessao.token) {
+        SincronizacaoPeriodica.agendar(aplicacao)
+        aplicacao.atualizarAlertas(ativar = true)
+    }
     val modeloMural = remember(sessao.token) { ModeloMural(aplicacao.mural, sessao.token, sessao.usuarioId, aoExpirar) }
     val mural by modeloMural.estado.collectAsStateWithLifecycle()
     DisposableEffect(modeloMural) { onDispose { modeloMural.fechar() } }

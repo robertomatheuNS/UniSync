@@ -44,6 +44,7 @@ class ModeloSessao(
                 throw erro
             } catch (_: Exception) {
                 runCatching { armazenamento.limpar() }
+                runCatching { limparCache() }
                 estado = EstadoAutenticacao(restaurando = false, solicitarLogin = true, mensagem = "Não foi possível recuperar a sessão. Entre novamente.")
             }
         }

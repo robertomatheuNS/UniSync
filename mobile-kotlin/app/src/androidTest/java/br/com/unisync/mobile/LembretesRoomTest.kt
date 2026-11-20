@@ -21,7 +21,7 @@ class LembretesRoomTest {
             antigo.execSQL("INSERT INTO oportunidades VALUES ('op', 'Oficina Kotlin', 'Ana', 'Kotlin', NULL, 'Oficina', '2028-03-01T12:00:00Z', 'prof')")
             antigo.version = 4
         }
-        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_4_5, BancoUniSync.MIGRACAO_5_6).build()
+        val banco = Room.databaseBuilder(contexto, BancoUniSync::class.java, nome).addMigrations(BancoUniSync.MIGRACAO_4_5, BancoUniSync.MIGRACAO_5_6, BancoUniSync.MIGRACAO_6_7).build()
         try {
             assertEquals("2028-02-29", banco.tarefas().listar("eu").single().prazo)
             assertEquals(123L, banco.tarefas().atualizadoEm("eu"))

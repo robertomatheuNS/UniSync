@@ -37,4 +37,12 @@ Para somente build, testes unitários e lint:
 
 O debug padrão usa `10.0.2.2` para alcançar as APIs pelo emulador. O script integrado usa `127.0.0.1` com `adb reverse` para as portas 5041 e 8000. Builds de release exigem endereços HTTPS definidos nas propriedades `unisync.authUrl` e `unisync.apiUrl`.
 
+Para gerar um APK de release assinado, configure `UNISYNC_KEYSTORE_FILE` (caminho absoluto), `UNISYNC_KEYSTORE_PASSWORD`, `UNISYNC_KEY_ALIAS` e `UNISYNC_KEY_PASSWORD` apenas no ambiente local ou no cofre de segredos da CI. Depois execute:
+
+```bash
+./gradlew :app:assembleRelease -Punisync.authUrl=https://auth.exemplo.com -Punisync.apiUrl=https://api.exemplo.com
+```
+
+O APK fica em `app/build/outputs/apk/release/`. O build falha se os endereços HTTPS ou a assinatura estiverem ausentes. Guarde a chave de assinatura em local seguro: atualizações do mesmo aplicativo exigem a mesma identidade de assinatura. Turmas e avisos consultados ficam salvos no aparelho para leitura offline, são apagados ao sair da conta e mostram quando os dados vieram do cache. Com a sessão ativa, o Android agenda sincronização periódica com rede; o sistema pode adiar sua execução para poupar bateria.
+
 `docs/TURMAS-E-AVISOS.md` é um documento local ignorado pelo Git. Não gerar `UniSync.zip`.

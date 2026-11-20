@@ -45,6 +45,20 @@ class ModeloAcademicoTest {
         assertNotNull(modelo.estado.value.erro); assertFalse(modelo.estado.value.atualizando); modelo.fechar()
     }
 
+    @Test fun dadosDoCacheMostramDataRealEVoltamAoEstadoOnline() = runTest(dispatcher) {
+        val repo = Fake().apply { conteudo = ConteudoAcademico(listOf(turma), listOf(aviso),
+            origemCache = true, atualizadoEm = 123L) }
+        val modelo = ModeloAcademico(repo, "token", "aluno", false, {})
+        runCurrent()
+        assertTrue(modelo.estado.value.offline)
+        assertEquals(123L, modelo.estado.value.atualizadoEm)
+        repo.conteudo = ConteudoAcademico(listOf(turma), listOf(aviso), atualizadoEm = 456L)
+        modelo.atualizar(); runCurrent()
+        assertFalse(modelo.estado.value.offline)
+        assertEquals(456L, modelo.estado.value.atualizadoEm)
+        modelo.fechar()
+    }
+
     @Test fun alunoNaoExecutaAcoesDeProfessorMesmoChamandoModelo() = runTest(dispatcher) {
         val repo = Fake(); val modelo = ModeloAcademico(repo, "token", "aluno", false, {})
         runCurrent()
