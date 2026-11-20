@@ -24,7 +24,6 @@ const routes = [
     children: [
       { path: '', name: 'dashboard', component: () => import('@/views/DashboardView.vue') },
       { path: 'professor', name: 'teacher', component: () => import('@/views/TeacherView.vue') },
-      { path: 'disciplinas', name: 'subjects', component: () => import('@/views/SubjectsView.vue') },
       { path: 'kanban', name: 'kanban', component: () => import('@/views/KanbanView.vue') },
     ],
   },
