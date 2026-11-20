@@ -9,6 +9,7 @@ import {
 import trashIcon from '@/assets/icons/trash.svg'
 const itens = ref([]),
   titulo = ref(''),
+  agendamento = ref(''),
   editando = ref(null),
   ocupado = ref(false),
   erro = ref('')
@@ -38,25 +39,30 @@ async function executar(acao) {
 function salvar() {
   const texto = titulo.value.trim()
   if (!texto) return
+  const agendado_em = agendamento.value ? new Date(agendamento.value).toISOString() : null
   executar(async () => {
     if (editando.value) {
       const atualizado = await atualizarLembrete(editando.value, {
         titulo: texto,
+        agendado_em,
       })
       itens.value = itens.value.map((item) =>
         item.id === atualizado.id ? atualizado : item,
       )
-    } else itens.value.push(await criarLembrete(texto))
+    } else itens.value.push(await criarLembrete({ titulo: texto, agendado_em }))
     cancelar()
   })
 }
 function cancelar() {
   editando.value = null
   titulo.value = ''
+  agendamento.value = ''
 }
 function editar(item) {
   editando.value = item.id
   titulo.value = item.titulo
+  const instante = item.agendado_em && new Date(item.agendado_em)
+  agendamento.value = instante ? new Date(instante.getTime() - instante.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''
 }
 function concluir(item) {
   executar(async () => {
@@ -102,6 +108,8 @@ onMounted(carregar)
         :disabled="ocupado"
         placeholder="O que você precisa lembrar?"
       />
+      <label for="lembrete-agendado">Data e horário do lembrete (opcional)</label>
+      <input id="lembrete-agendado" v-model="agendamento" type="datetime-local" :disabled="ocupado" />
       <div class="acoes">
         <button
           v-if="editando"
@@ -135,6 +143,7 @@ onMounted(carregar)
         >
           {{ item.titulo }}
         </button>
+        <time v-if="item.agendado_em" :datetime="item.agendado_em">{{ new Date(item.agendado_em).toLocaleString('pt-BR') }}</time>
         <button
           class="icone"
           :disabled="ocupado"
