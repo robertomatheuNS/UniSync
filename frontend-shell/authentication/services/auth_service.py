@@ -88,11 +88,24 @@ class AuthenticationService:
             )
 
         if response.status_code == 200:
-            dados = response.json()
+            try:
+                dados = response.json()
+            except (TypeError, ValueError):
+                return AuthenticationResult(
+                    success=False,
+                    message="O serviço de autenticação retornou uma resposta inválida.",
+                )
+
+            token = dados.get("token") if isinstance(dados, dict) else None
+            if not isinstance(token, str) or not token.strip():
+                return AuthenticationResult(
+                    success=False,
+                    message="O serviço de autenticação não retornou uma sessão válida.",
+                )
 
             return AuthenticationResult(
                 success=True,
-                token=dados.get("token"),
+                token=token,
             )
 
         if response.status_code == 401:
@@ -180,7 +193,10 @@ class AuthenticationService:
             )
 
         if response.status_code == 409:
-            dados = response.json()
+            try:
+                dados = response.json()
+            except (TypeError, ValueError):
+                dados = {}
 
             return RegistrationResult(
                 success=False,
@@ -191,7 +207,10 @@ class AuthenticationService:
             )
 
         if response.status_code == 400:
-            dados = response.json()
+            try:
+                dados = response.json()
+            except (TypeError, ValueError):
+                dados = {}
 
             return RegistrationResult(
                 success=False,
