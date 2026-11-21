@@ -1,4 +1,6 @@
 from unittest.mock import Mock, patch
+import base64
+import json
 
 import requests
 from django.test import TestCase, override_settings
@@ -38,10 +40,42 @@ class AuthenticationTests(TestCase):
         self.assertRedirects(response, reverse("app"))
         self.assertIn("auth_token", self.client.session)
 
+    @override_settings(AUTH_MOCK=False, API_BASE_URL="https://localhost:7129")
+    @patch("authentication.services.auth_service.requests.post")
+    def test_login_rejects_success_without_token(self, mock_post):
+        response_api = Mock()
+        response_api.status_code = 200
+        response_api.json.return_value = {}
+        mock_post.return_value = response_api
+
+        response = self.client.post(
+            reverse("login"),
+            {"email": "usuario@teste.com", "senha": "senha-teste"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "O serviço de autenticação não retornou uma sessão válida.",
+        )
+
     def test_dashboard_requires_authentication(self):
         response = self.client.get(reverse("dashboard"))
 
         self.assertRedirects(response, reverse("login"))
+
+    def test_expired_jwt_clears_session_before_opening_app(self):
+        payload = base64.urlsafe_b64encode(
+            json.dumps({"exp": 1}).encode("utf-8")
+        ).decode("ascii").rstrip("=")
+        session = self.client.session
+        session["auth_token"] = f"header.{payload}.signature"
+        session.save()
+
+        response = self.client.get(reverse("app"))
+
+        self.assertRedirects(response, reverse("login"))
+        self.assertNotIn("auth_token", self.client.session)
 
     def test_authenticated_user_can_access_app(self):
         session = self.client.session

@@ -1,5 +1,8 @@
 import os
+import secrets
 from pathlib import Path
+
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -9,12 +12,39 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-x2g0l^o(6%#*#lho3k6-!5*7o82v_ltb7n5+$o*hw+y9+tgtjm'
+def env_bool(nome, padrao=False):
+    valor = os.getenv(nome)
+    if valor is None:
+        return padrao
+    return valor.strip().lower() in {"1", "true", "yes", "on"}
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
-ALLOWED_HOSTS = []
+def env_list(nome, padrao=()):
+    valor = os.getenv(nome)
+    if valor is None:
+        return list(padrao)
+    return [item.strip() for item in valor.split(",") if item.strip()]
+
+
+# O ambiente local continua funcionando sem configuração extra. Em qualquer
+# ambiente não-debug, a chave precisa vir do segredo do deploy.
+DEBUG = env_bool("DJANGO_DEBUG", True)
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
+if not SECRET_KEY:
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            "Defina DJANGO_SECRET_KEY quando DJANGO_DEBUG estiver desativado."
+        )
+    SECRET_KEY = secrets.token_urlsafe(50)
+elif not DEBUG and len(SECRET_KEY) < 50:
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY deve possuir pelo menos 50 caracteres em produção."
+    )
+
+ALLOWED_HOSTS = env_list(
+    "DJANGO_ALLOWED_HOSTS",
+    ("localhost", "127.0.0.1", "[::1]", "frontend-shell"),
+)
 
 
 # Application definition
@@ -120,4 +150,33 @@ API_BASE_URL = os.getenv(
     "https://localhost:7129",
 )
 
-AUTH_MOCK = os.getenv("AUTH_MOCK", "False").lower() == "true"
+AUTH_MOCK = env_bool("AUTH_MOCK")
+if not DEBUG and AUTH_MOCK:
+    raise ImproperlyConfigured(
+        "AUTH_MOCK deve permanecer desativado quando DJANGO_DEBUG=false."
+    )
+if not DEBUG and not API_BASE_URL.lower().startswith("https://"):
+    raise ImproperlyConfigured(
+        "API_BASE_URL deve usar HTTPS quando DJANGO_DEBUG=false."
+    )
+
+# Sessões curtas reduzem o tempo de exposição de um JWT armazenado no servidor
+# de sessão. A API continua sendo a autoridade para validar o token.
+SESSION_COOKIE_AGE = int(os.getenv("DJANGO_SESSION_AGE", "3600"))
+SESSION_SAVE_EVERY_REQUEST = True
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
+
+# Cabeçalhos de segurança aplicáveis sem alterar o contrato do Vue.
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "same-origin"
+X_FRAME_OPTIONS = "DENY"
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", not DEBUG)
+if not DEBUG:
+    SECURE_HSTS_SECONDS = int(os.getenv("DJANGO_HSTS_SECONDS", "31536000"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = env_bool("DJANGO_HSTS_PRELOAD")
